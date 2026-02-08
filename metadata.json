@@ -1,0 +1,7 @@
+{
+  "name": "FitLock - Exercise App Lock",
+  "description": "A prototype demonstrating an app-lock mechanism that uses MediaPipe Pose to unlock apps via physical exercise.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

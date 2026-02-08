@@ -1,0 +1,36 @@
+import { LucideIcon } from 'lucide-react';
+
+export enum ScreenName {
+  HOME = 'HOME',
+  LOCK_CHALLENGE = 'LOCK_CHALLENGE',
+  APP_CONTENT = 'APP_CONTENT',
+  SETTINGS = 'SETTINGS',
+  PROFILE = 'PROFILE'
+}
+
+export interface AppItem {
+  id: string;
+  name: string;
+  iconColor: string;
+  isLocked: boolean;
+  requiredReps: number;
+}
+
+export interface NavItem {
+  id: ScreenName;
+  label: string;
+  icon: LucideIcon;
+}
+
+export enum ExerciseState {
+  IDLE = 'IDLE',
+  UP = 'UP',
+  DOWN = 'DOWN',
+  COMPLETED = 'COMPLETED'
+}
+
+export enum ExerciseType {
+  PUSHUPS = 'Pushups',
+  SQUATS = 'Squats',
+  JUMPING_JACKS = 'Jumping Jacks'
+}
