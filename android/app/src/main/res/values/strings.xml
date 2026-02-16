@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FitLock</string>
+    <string name="title_activity_main">FitLock</string>
+    <string name="package_name">com.savindu.fitlock</string>
+    <string name="custom_url_scheme">com.savindu.fitlock</string>
+</resources>
