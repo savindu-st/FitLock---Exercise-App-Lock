@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ScreenName, AppItem, HistoryItem, ExerciseType } from './types';
 import MobileLayout from './components/Layout/MobileLayout';
 import HomeScreen from './components/Screens/HomeScreen';
@@ -26,7 +26,7 @@ const App: React.FC = () => {
   const [targetApp, setTargetApp] = useState<AppItem | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
-  const handleAppClick = (app: AppItem) => {
+  const handleAppClick = useCallback((app: AppItem) => {
     if (app.isLocked) {
       setTargetApp(app);
       setCurrentScreen(ScreenName.LOCK_CHALLENGE);
@@ -34,37 +34,40 @@ const App: React.FC = () => {
       setTargetApp(app);
       setCurrentScreen(ScreenName.APP_CONTENT);
     }
-  };
+  }, []);
 
-  const handleUpdateApp = (appId: string, updates: Partial<AppItem>) => {
+  const handleUpdateApp = useCallback((appId: string, updates: Partial<AppItem>) => {
     setApps(prevApps => prevApps.map(app => 
       app.id === appId ? { ...app, ...updates } : app
     ));
-  };
+  }, []);
 
-  const handleUnlock = (exerciseType: ExerciseType, reps: number) => {
-    if (targetApp) {
-      const newItem: HistoryItem = {
-        id: Date.now().toString(),
-        appName: targetApp.name,
-        exerciseType: exerciseType,
-        reps: reps,
-        timestamp: Date.now()
-      };
-      setHistory(prev => [newItem, ...prev]);
-    }
+  const handleUnlock = useCallback((exerciseType: ExerciseType, reps: number) => {
+    setTargetApp(prevTarget => {
+      if (prevTarget) {
+        const newItem: HistoryItem = {
+          id: Date.now().toString(),
+          appName: prevTarget.name,
+          exerciseType: exerciseType,
+          reps: reps,
+          timestamp: Date.now()
+        };
+        setHistory(prev => [newItem, ...prev]);
+      }
+      return prevTarget;
+    });
     setCurrentScreen(ScreenName.APP_CONTENT);
-  };
+  }, []);
 
-  const handleCancelLock = () => {
+  const handleCancelLock = useCallback(() => {
     setTargetApp(null);
     setCurrentScreen(ScreenName.HOME);
-  };
+  }, []);
 
-  const handleBackToHome = () => {
+  const handleBackToHome = useCallback(() => {
     setTargetApp(null);
     setCurrentScreen(ScreenName.HOME);
-  };
+  }, []);
 
   const renderContent = () => {
     switch (currentScreen) {
