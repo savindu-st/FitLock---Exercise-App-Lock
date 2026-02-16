@@ -8,7 +8,7 @@ declare const window: any;
 
 interface LockScreenProps {
   app: AppItem;
-  onUnlock: () => void;
+  onUnlock: (type: ExerciseType, reps: number) => void;
   onCancel: () => void;
 }
 
@@ -182,9 +182,13 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
          setFeedback("Access Granted!");
          setExerciseState(ExerciseState.COMPLETED);
          // Stop counting
-         stateRef.current = ExerciseState.COMPLETED; 
+         stateRef.current = ExerciseState.COMPLETED;
+         // Store values to avoid closure issues in timeout
+         const completedExercise = exerciseRef.current;
+         const completedReps = countRef.current;
+         
          setTimeout(() => {
-            onUnlock();
+            onUnlock(completedExercise, completedReps);
          }, 1500);
       }
     };

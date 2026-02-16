@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScreenName, NavItem } from '../../types';
-import { Home, Shield, User } from 'lucide-react';
+import { Home, Shield, User, Clock } from 'lucide-react';
 
 interface BottomNavProps {
   currentScreen: ScreenName;
@@ -10,6 +10,7 @@ interface BottomNavProps {
 const NAV_ITEMS: NavItem[] = [
   { id: ScreenName.HOME, label: 'Launcher', icon: Home },
   { id: ScreenName.SETTINGS, label: 'App Lock', icon: Shield },
+  { id: ScreenName.HISTORY, label: 'History', icon: Clock },
   { id: ScreenName.PROFILE, label: 'Profile', icon: User },
 ];
 

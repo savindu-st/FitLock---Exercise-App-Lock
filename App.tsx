@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { ScreenName, AppItem } from './types';
+import { ScreenName, AppItem, HistoryItem, ExerciseType } from './types';
 import MobileLayout from './components/Layout/MobileLayout';
 import HomeScreen from './components/Screens/HomeScreen';
 import LockScreen from './components/Screens/LockScreen';
 import ProfileScreen from './components/Screens/ProfileScreen';
+import AppLockSettingsScreen from './components/Screens/AppLockSettingsScreen';
+import HistoryScreen from './components/Screens/HistoryScreen';
 import { Settings, CheckCircle } from 'lucide-react';
 
 const INITIAL_APPS: AppItem[] = [
@@ -22,6 +24,7 @@ const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>(ScreenName.HOME);
   const [apps, setApps] = useState<AppItem[]>(INITIAL_APPS);
   const [targetApp, setTargetApp] = useState<AppItem | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
   const handleAppClick = (app: AppItem) => {
     if (app.isLocked) {
@@ -33,7 +36,23 @@ const App: React.FC = () => {
     }
   };
 
-  const handleUnlock = () => {
+  const handleUpdateApp = (appId: string, updates: Partial<AppItem>) => {
+    setApps(prevApps => prevApps.map(app => 
+      app.id === appId ? { ...app, ...updates } : app
+    ));
+  };
+
+  const handleUnlock = (exerciseType: ExerciseType, reps: number) => {
+    if (targetApp) {
+      const newItem: HistoryItem = {
+        id: Date.now().toString(),
+        appName: targetApp.name,
+        exerciseType: exerciseType,
+        reps: reps,
+        timestamp: Date.now()
+      };
+      setHistory(prev => [newItem, ...prev]);
+    }
     setCurrentScreen(ScreenName.APP_CONTENT);
   };
 
@@ -52,11 +71,14 @@ const App: React.FC = () => {
       case ScreenName.HOME:
         return <HomeScreen apps={apps} onAppClick={handleAppClick} />;
       
+      case ScreenName.SETTINGS:
+        return <AppLockSettingsScreen apps={apps} onUpdateApp={handleUpdateApp} />;
+
+      case ScreenName.HISTORY:
+        return <HistoryScreen history={history} />;
+
       case ScreenName.LOCK_CHALLENGE:
         if (!targetApp) return null;
-        // LockScreen takes over the full view, so we render it specially
-        // But here it's inside the layout. We might want to hide the layout bars for lock screen?
-        // Let's handle layout visibility in the return statement.
         return <LockScreen app={targetApp} onUnlock={handleUnlock} onCancel={handleCancelLock} />;
       
       case ScreenName.APP_CONTENT:
@@ -95,11 +117,21 @@ const App: React.FC = () => {
     );
   }
 
+  // Determine title based on screen
+  const getTitle = () => {
+     switch(currentScreen) {
+        case ScreenName.SETTINGS: return "App Lock Config";
+        case ScreenName.HISTORY: return "Workout History";
+        case ScreenName.PROFILE: return "Profile";
+        default: return "FitLock Launcher";
+     }
+  };
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center">
       <div className="w-full h-[100dvh] sm:h-[800px] sm:w-[400px] sm:rounded-3xl sm:border-8 sm:border-gray-900 bg-white overflow-hidden shadow-2xl relative flex flex-col">
         <MobileLayout 
-          title="FitLock Launcher"
+          title={getTitle()}
           currentScreen={currentScreen}
           onNavigate={(screen) => {
              if (screen === ScreenName.HOME) handleBackToHome();

@@ -5,7 +5,8 @@ export enum ScreenName {
   LOCK_CHALLENGE = 'LOCK_CHALLENGE',
   APP_CONTENT = 'APP_CONTENT',
   SETTINGS = 'SETTINGS',
-  PROFILE = 'PROFILE'
+  PROFILE = 'PROFILE',
+  HISTORY = 'HISTORY'
 }
 
 export interface AppItem {
@@ -20,6 +21,14 @@ export interface NavItem {
   id: ScreenName;
   label: string;
   icon: LucideIcon;
+}
+
+export interface HistoryItem {
+  id: string;
+  appName: string;
+  exerciseType: ExerciseType;
+  reps: number;
+  timestamp: number;
 }
 
 export enum ExerciseState {
