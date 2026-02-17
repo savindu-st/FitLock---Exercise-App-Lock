@@ -6,7 +6,8 @@ export enum ScreenName {
   APP_CONTENT = 'APP_CONTENT',
   SETTINGS = 'SETTINGS',
   PROFILE = 'PROFILE',
-  HISTORY = 'HISTORY'
+  HISTORY = 'HISTORY',
+  PRIVACY_POLICY = 'PRIVACY_POLICY'
 }
 
 export interface AppItem {

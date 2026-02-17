@@ -19,3 +19,6 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Added to fix AGP 9.0 build error while transitioning to proguard-android-optimize.txt
+-dontoptimize
