@@ -123,9 +123,9 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
                 setReps(countRef.current);
                 stateRef.current = ExerciseState.UP;
                 setFeedback("Good! Down again.");
-              } else {
+              } else if (stateRef.current !== ExerciseState.COMPLETED) {
                 stateRef.current = ExerciseState.UP;
-                if (stateRef.current !== ExerciseState.COMPLETED) setFeedback("Start going down");
+                setFeedback("Start going down");
               }
             } else if (angle < 90) { // DOWN
               if (stateRef.current === ExerciseState.UP) {
@@ -156,9 +156,9 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
                 setReps(countRef.current);
                 stateRef.current = ExerciseState.UP;
                 setFeedback("Great! Squat down.");
-              } else {
+              } else if (stateRef.current !== ExerciseState.COMPLETED) {
                 stateRef.current = ExerciseState.UP;
-                if (stateRef.current !== ExerciseState.COMPLETED) setFeedback("Squat down");
+                setFeedback("Squat down");
               }
             } else if (angle < 100) { // SQUATTING
               if (stateRef.current === ExerciseState.UP) {
@@ -194,9 +194,9 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
                 setReps(countRef.current);
                 stateRef.current = ExerciseState.DOWN;
                 setFeedback("Good! Jump up.");
-              } else {
+              } else if (stateRef.current !== ExerciseState.COMPLETED) {
                 stateRef.current = ExerciseState.DOWN;
-                if (stateRef.current !== ExerciseState.COMPLETED) setFeedback("Jump!");
+                setFeedback("Jump!");
               }
             } else if (handsUp) { // UP (Star position)
               if (stateRef.current === ExerciseState.DOWN || stateRef.current === ExerciseState.IDLE) {
