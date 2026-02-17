@@ -1,11 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ScreenName, AppItem, HistoryItem, ExerciseType } from './types';
+import { saveApps, loadApps, saveHistory, loadHistory } from './utils/storage';
 import MobileLayout from './components/Layout/MobileLayout';
 import HomeScreen from './components/Screens/HomeScreen';
 import LockScreen from './components/Screens/LockScreen';
 import ProfileScreen from './components/Screens/ProfileScreen';
 import AppLockSettingsScreen from './components/Screens/AppLockSettingsScreen';
 import HistoryScreen from './components/Screens/HistoryScreen';
+import PrivacyPolicyScreen from './components/Screens/PrivacyPolicyScreen';
 import { Settings, CheckCircle } from 'lucide-react';
 
 const INITIAL_APPS: AppItem[] = [
@@ -22,9 +24,13 @@ const INITIAL_APPS: AppItem[] = [
 
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>(ScreenName.HOME);
-  const [apps, setApps] = useState<AppItem[]>(INITIAL_APPS);
+  const [apps, setApps] = useState<AppItem[]>(() => loadApps() || INITIAL_APPS);
   const [targetApp, setTargetApp] = useState<AppItem | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory());
+
+  // Auto-save apps and history to localStorage
+  useEffect(() => { saveApps(apps); }, [apps]);
+  useEffect(() => { saveHistory(history); }, [history]);
 
   const handleAppClick = useCallback((app: AppItem) => {
     if (app.isLocked) {
@@ -37,7 +43,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleUpdateApp = useCallback((appId: string, updates: Partial<AppItem>) => {
-    setApps(prevApps => prevApps.map(app => 
+    setApps(prevApps => prevApps.map(app =>
       app.id === appId ? { ...app, ...updates } : app
     ));
   }, []);
@@ -73,7 +79,7 @@ const App: React.FC = () => {
     switch (currentScreen) {
       case ScreenName.HOME:
         return <HomeScreen apps={apps} onAppClick={handleAppClick} />;
-      
+
       case ScreenName.SETTINGS:
         return <AppLockSettingsScreen apps={apps} onUpdateApp={handleUpdateApp} />;
 
@@ -83,16 +89,16 @@ const App: React.FC = () => {
       case ScreenName.LOCK_CHALLENGE:
         if (!targetApp) return null;
         return <LockScreen app={targetApp} onUnlock={handleUnlock} onCancel={handleCancelLock} />;
-      
+
       case ScreenName.APP_CONTENT:
         return (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-white">
             <div className={`w-24 h-24 rounded-3xl ${targetApp?.iconColor} flex items-center justify-center mb-6 shadow-xl`}>
-               <CheckCircle size={48} className="text-white" />
+              <CheckCircle size={48} className="text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">{targetApp?.name} Unlocked</h1>
             <p className="text-gray-500 mb-8">You have successfully completed the exercise challenge.</p>
-            <button 
+            <button
               onClick={handleBackToHome}
               className="px-6 py-3 bg-gray-900 text-white rounded-xl font-medium active:scale-95 transition-transform"
             >
@@ -102,8 +108,11 @@ const App: React.FC = () => {
         );
 
       case ScreenName.PROFILE:
-        return <ProfileScreen />;
-        
+        return <ProfileScreen onNavigate={(screen) => setCurrentScreen(screen)} />;
+
+      case ScreenName.PRIVACY_POLICY:
+        return <PrivacyPolicyScreen onBack={() => setCurrentScreen(ScreenName.PROFILE)} />;
+
       default:
         return <HomeScreen apps={apps} onAppClick={handleAppClick} />;
     }
@@ -122,23 +131,24 @@ const App: React.FC = () => {
 
   // Determine title based on screen
   const getTitle = () => {
-     switch(currentScreen) {
-        case ScreenName.SETTINGS: return "App Lock Config";
-        case ScreenName.HISTORY: return "Workout History";
-        case ScreenName.PROFILE: return "Profile";
-        default: return "FitLock Launcher";
-     }
+    switch (currentScreen) {
+      case ScreenName.SETTINGS: return "App Lock Config";
+      case ScreenName.HISTORY: return "Workout History";
+      case ScreenName.PROFILE: return "Profile";
+      case ScreenName.PRIVACY_POLICY: return "Privacy Policy";
+      default: return "FitLock Launcher";
+    }
   };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center">
       <div className="w-full h-[100dvh] sm:h-[800px] sm:w-[400px] sm:rounded-3xl sm:border-8 sm:border-gray-900 bg-white overflow-hidden shadow-2xl relative flex flex-col">
-        <MobileLayout 
+        <MobileLayout
           title={getTitle()}
           currentScreen={currentScreen}
           onNavigate={(screen) => {
-             if (screen === ScreenName.HOME) handleBackToHome();
-             else setCurrentScreen(screen);
+            if (screen === ScreenName.HOME) handleBackToHome();
+            else setCurrentScreen(screen);
           }}
           actions={
             <button className="p-2 text-white/90 hover:text-white transition-colors">
