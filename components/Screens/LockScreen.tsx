@@ -235,7 +235,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
 
       // Use local mediapipe files for offline support
       pose = new window.Pose({
-        locateFile: (file: string) => `/mediapipe/${file}`,
+        locateFile: (file: string) => `./mediapipe/${file}`,
       });
 
       pose.setOptions({
