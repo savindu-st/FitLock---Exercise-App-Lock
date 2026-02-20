@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { ScreenName, AppItem, HistoryItem, ExerciseType } from './types';
-import { saveApps, loadApps, saveHistory, loadHistory } from './utils/storage';
+import { saveApps, loadApps, saveHistory, loadHistory, isCameraPermissionAsked, setCameraPermissionAsked } from './utils/storage';
 import MobileLayout from './components/Layout/MobileLayout';
 import HomeScreen from './components/Screens/HomeScreen';
 import LockScreen from './components/Screens/LockScreen';
@@ -8,6 +8,7 @@ import ProfileScreen from './components/Screens/ProfileScreen';
 import AppLockSettingsScreen from './components/Screens/AppLockSettingsScreen';
 import HistoryScreen from './components/Screens/HistoryScreen';
 import PrivacyPolicyScreen from './components/Screens/PrivacyPolicyScreen';
+import CameraPermissionScreen from './components/Screens/CameraPermissionScreen';
 import { Settings, CheckCircle } from 'lucide-react';
 
 const INITIAL_APPS: AppItem[] = [
@@ -23,19 +24,40 @@ const INITIAL_APPS: AppItem[] = [
 ];
 
 const App: React.FC = () => {
-  const [currentScreen, setCurrentScreen] = useState<ScreenName>(ScreenName.HOME);
+  const [currentScreen, setCurrentScreen] = useState<ScreenName>(
+    isCameraPermissionAsked() ? ScreenName.HOME : ScreenName.CAMERA_PERMISSION
+  );
   const [apps, setApps] = useState<AppItem[]>(() => loadApps() || INITIAL_APPS);
   const [targetApp, setTargetApp] = useState<AppItem | null>(null);
+  const [pendingLockApp, setPendingLockApp] = useState<AppItem | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory());
 
   // Auto-save apps and history to localStorage
   useEffect(() => { saveApps(apps); }, [apps]);
   useEffect(() => { saveHistory(history); }, [history]);
 
-  const handleAppClick = useCallback((app: AppItem) => {
+  const checkCameraPermission = async (): Promise<boolean> => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleAppClick = useCallback(async (app: AppItem) => {
     if (app.isLocked) {
-      setTargetApp(app);
-      setCurrentScreen(ScreenName.LOCK_CHALLENGE);
+      // Check camera permission before going to lock challenge
+      const hasCamera = await checkCameraPermission();
+      if (!hasCamera) {
+        // Camera not available — show permission screen, then go to lock after
+        setPendingLockApp(app);
+        setCurrentScreen(ScreenName.CAMERA_PERMISSION);
+      } else {
+        setTargetApp(app);
+        setCurrentScreen(ScreenName.LOCK_CHALLENGE);
+      }
     } else {
       setTargetApp(app);
       setCurrentScreen(ScreenName.APP_CONTENT);
@@ -75,13 +97,30 @@ const App: React.FC = () => {
     setCurrentScreen(ScreenName.HOME);
   }, []);
 
+  const handleCameraPermissionDone = useCallback(() => {
+    setCameraPermissionAsked();
+    // If there's a pending locked app, go directly to the lock challenge
+    if (pendingLockApp) {
+      setTargetApp(pendingLockApp);
+      setPendingLockApp(null);
+      setCurrentScreen(ScreenName.LOCK_CHALLENGE);
+    } else {
+      setCurrentScreen(ScreenName.HOME);
+    }
+  }, [pendingLockApp]);
+
+  const handleRequestCameraFromSettings = useCallback(() => {
+    setPendingLockApp(null);
+    setCurrentScreen(ScreenName.CAMERA_PERMISSION);
+  }, []);
+
   const renderContent = () => {
     switch (currentScreen) {
       case ScreenName.HOME:
         return <HomeScreen apps={apps} onAppClick={handleAppClick} />;
 
       case ScreenName.SETTINGS:
-        return <AppLockSettingsScreen apps={apps} onUpdateApp={handleUpdateApp} />;
+        return <AppLockSettingsScreen apps={apps} onUpdateApp={handleUpdateApp} onRequestCamera={handleRequestCameraFromSettings} />;
 
       case ScreenName.HISTORY:
         return <HistoryScreen history={history} />;
@@ -113,10 +152,18 @@ const App: React.FC = () => {
       case ScreenName.PRIVACY_POLICY:
         return <PrivacyPolicyScreen onBack={() => setCurrentScreen(ScreenName.PROFILE)} />;
 
+      case ScreenName.CAMERA_PERMISSION:
+        return <CameraPermissionScreen onPermissionGranted={handleCameraPermissionDone} onSkip={handleCameraPermissionDone} />;
+
       default:
         return <HomeScreen apps={apps} onAppClick={handleAppClick} />;
     }
   };
+
+  // Camera Permission screen is full-screen, rendered outside the layout
+  if (currentScreen === ScreenName.CAMERA_PERMISSION) {
+    return <CameraPermissionScreen onPermissionGranted={handleCameraPermissionDone} onSkip={handleCameraPermissionDone} />;
+  }
 
   // If we are in Lock Challenge, we want a Full Screen experience (no App Bar, No Bottom Nav)
   if (currentScreen === ScreenName.LOCK_CHALLENGE && targetApp) {

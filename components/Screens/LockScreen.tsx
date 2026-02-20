@@ -57,6 +57,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
   const [reps, setReps] = useState(0);
   const [feedback, setFeedback] = useState("Get into position");
   const [loading, setLoading] = useState(true);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [exerciseState, setExerciseState] = useState<ExerciseState>(ExerciseState.IDLE);
   const [activeExercise, setActiveExercise] = useState<ExerciseType>(ExerciseType.PUSHUPS);
   const [showInfo, setShowInfo] = useState(false);
@@ -228,37 +229,52 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
     };
 
     const initMediaPipe = async () => {
-      if (!window.Pose) {
-        console.error("MediaPipe Pose not loaded");
-        return;
-      }
+      try {
+        console.log('[FitLock] Starting MediaPipe init...');
+        console.log('[FitLock] window.Pose:', !!window.Pose);
+        console.log('[FitLock] window.Camera:', !!window.Camera);
 
-      // Use local mediapipe files for offline support
-      pose = new window.Pose({
-        locateFile: (file: string) => `./mediapipe/${file}`,
-      });
+        if (!window.Pose) {
+          console.error('[FitLock] MediaPipe Pose not loaded');
+          setCameraError('Exercise AI failed to load. Please restart the app.');
+          return;
+        }
 
-      pose.setOptions({
-        modelComplexity: 1,
-        smoothLandmarks: true,
-        enableSegmentation: false,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
-
-      pose.onResults(onResults);
-
-      if (videoRef.current) {
-        camera = new window.Camera(videoRef.current, {
-          onFrame: async () => {
-            if (videoRef.current) {
-              await pose.send({ image: videoRef.current });
-            }
-          },
-          width: 640,
-          height: 480
+        // Use local mediapipe files for offline support
+        pose = new window.Pose({
+          locateFile: (file: string) => `./mediapipe/${file}`,
         });
-        camera.start();
+
+        pose.setOptions({
+          modelComplexity: 1,
+          smoothLandmarks: true,
+          enableSegmentation: false,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+
+        pose.onResults(onResults);
+        console.log('[FitLock] Pose model configured, starting camera...');
+
+        if (videoRef.current) {
+          camera = new window.Camera(videoRef.current, {
+            onFrame: async () => {
+              if (videoRef.current) {
+                await pose.send({ image: videoRef.current });
+              }
+            },
+            width: 640,
+            height: 480
+          });
+          await camera.start();
+          console.log('[FitLock] Camera started successfully');
+        } else {
+          console.error('[FitLock] Video element not found');
+          setCameraError('Camera element not ready. Please go back and try again.');
+        }
+      } catch (err: any) {
+        console.error('[FitLock] MediaPipe init error:', err);
+        setCameraError(`Camera failed: ${err?.message || 'Unknown error'}. Please ensure camera permission is granted.`);
       }
     };
 
@@ -318,9 +334,27 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
       <div className="relative flex-1 bg-black overflow-hidden flex items-center justify-center">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-gray-900">
-            <div className="flex flex-col items-center">
-              <RefreshCw className="animate-spin mb-4 text-blue-500" size={32} />
-              <p className="text-gray-400">Starting AI Camera...</p>
+            <div className="flex flex-col items-center px-6 text-center">
+              {cameraError ? (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+                    <X size={32} className="text-red-400" />
+                  </div>
+                  <p className="text-red-400 font-medium mb-2">Camera Error</p>
+                  <p className="text-gray-400 text-sm max-w-xs">{cameraError}</p>
+                  <button
+                    onClick={onCancel}
+                    className="mt-6 px-6 py-2 bg-gray-700 text-white rounded-xl text-sm font-medium hover:bg-gray-600 transition-colors"
+                  >
+                    Go Back
+                  </button>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="animate-spin mb-4 text-blue-500" size={32} />
+                  <p className="text-gray-400">Starting AI Camera...</p>
+                </>
+              )}
             </div>
           </div>
         )}
