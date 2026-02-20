@@ -230,23 +230,21 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
 
     const initMediaPipe = async () => {
       try {
-        console.log('[FitLock] Starting MediaPipe init...');
-        console.log('[FitLock] window.Pose:', !!window.Pose);
-        console.log('[FitLock] window.Camera:', !!window.Camera);
+        console.log('[FitLock] Step 1: Checking MediaPipe globals...');
 
         if (!window.Pose) {
-          console.error('[FitLock] MediaPipe Pose not loaded');
           setCameraError('Exercise AI failed to load. Please restart the app.');
           return;
         }
 
-        // Use local mediapipe files for offline support
+        console.log('[FitLock] Step 2: Creating Pose instance...');
         pose = new window.Pose({
           locateFile: (file: string) => `./mediapipe/${file}`,
         });
 
+        console.log('[FitLock] Step 3: Setting options...');
         pose.setOptions({
-          modelComplexity: 1,
+          modelComplexity: 0,
           smoothLandmarks: true,
           enableSegmentation: false,
           minDetectionConfidence: 0.5,
@@ -254,34 +252,108 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
         });
 
         pose.onResults(onResults);
-        console.log('[FitLock] Pose model configured, starting camera...');
+        console.log('[FitLock] Step 4: Pose configured.');
 
-        if (videoRef.current) {
-          camera = new window.Camera(videoRef.current, {
-            onFrame: async () => {
-              if (videoRef.current) {
-                await pose.send({ image: videoRef.current });
-              }
-            },
-            width: 640,
-            height: 480
-          });
-          await camera.start();
-          console.log('[FitLock] Camera started successfully');
-        } else {
-          console.error('[FitLock] Video element not found');
+        if (!videoRef.current) {
           setCameraError('Camera element not ready. Please go back and try again.');
+          return;
         }
+
+        // Get camera stream
+        console.log('[FitLock] Step 5: Requesting camera...');
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, facingMode: 'user' }
+          });
+          console.log('[FitLock] Step 5 OK: Got stream');
+        } catch (camErr: any) {
+          setCameraError(`Camera access denied: ${camErr?.message || 'Unknown'}. Please grant camera permission.`);
+          return;
+        }
+
+        // Assign stream and wait for video to actually have pixel data
+        console.log('[FitLock] Step 6: Waiting for video data...');
+        const video = videoRef.current;
+        video.srcObject = stream;
+
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Video load timeout')), 10000);
+          video.onloadeddata = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+          video.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error('Video element error'));
+          };
+          video.play().catch(reject);
+        });
+
+        console.log('[FitLock] Step 6 OK: Video ready, size:', video.videoWidth, 'x', video.videoHeight);
+
+        // Initialize pose model by sending one frame and waiting
+        console.log('[FitLock] Step 7: Initializing pose model with first frame...');
+        try {
+          await pose.send({ image: video });
+          console.log('[FitLock] Step 7 OK: First frame processed');
+        } catch (e) {
+          console.warn('[FitLock] Step 7 WARN: First frame failed, retrying...', e);
+          // Wait a bit and retry
+          await new Promise(r => setTimeout(r, 1000));
+          await pose.send({ image: video });
+          console.log('[FitLock] Step 7 OK: Retry succeeded');
+        }
+
+        // Non-blocking frame loop: skip frames while pose is still processing
+        console.log('[FitLock] Step 8: Starting frame loop...');
+        let running = true;
+        let processing = false;
+        const processFrame = () => {
+          if (!running || !videoRef.current || !pose) return;
+          if (!processing) {
+            processing = true;
+            pose.send({ image: videoRef.current }).then(() => {
+              processing = false;
+            }).catch((e: any) => {
+              processing = false;
+              console.error('[FitLock] Frame error:', e);
+            });
+          }
+          if (running) {
+            requestAnimationFrame(processFrame);
+          }
+        };
+        requestAnimationFrame(processFrame);
+
+        // Store cleanup
+        camera = {
+          stop: () => {
+            running = false;
+            stream.getTracks().forEach(t => t.stop());
+            if (pose) pose.close();
+          }
+        } as any;
+
       } catch (err: any) {
-        console.error('[FitLock] MediaPipe init error:', err);
-        setCameraError(`Camera failed: ${err?.message || 'Unknown error'}. Please ensure camera permission is granted.`);
+        console.error('[FitLock] initMediaPipe FATAL:', err);
+        setCameraError(`Camera failed: ${err?.message || 'Unknown error'}`);
       }
     };
 
+    // Timeout: if still loading after 15s, show error
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.error('[FitLock] TIMEOUT: Camera init took too long');
+        setCameraError('Camera initialization timed out. Please go back and try again.');
+      }
+    }, 15000);
+
     // Small delay to ensure scripts loaded
-    setTimeout(initMediaPipe, 1000);
+    setTimeout(initMediaPipe, 500);
 
     return () => {
+      clearTimeout(timeoutId);
       if (camera) camera.stop();
       if (pose) pose.close();
     };

@@ -12,12 +12,11 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
   const [cameraGranted, setCameraGranted] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Check if camera permission is currently granted
+    // Check if camera permission is currently granted (without acquiring camera)
     const checkCamera = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        stream.getTracks().forEach(track => track.stop());
-        setCameraGranted(true);
+        const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        setCameraGranted(result.state === 'granted');
       } catch {
         setCameraGranted(false);
       }
@@ -44,10 +43,10 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
     <div className="p-4 space-y-4 pb-24">
       {/* Camera Access Section */}
       <div className={`p-4 rounded-xl border mb-4 ${cameraGranted === true
-          ? 'bg-green-50 border-green-100'
-          : cameraGranted === false
-            ? 'bg-amber-50 border-amber-100'
-            : 'bg-gray-50 border-gray-100'
+        ? 'bg-green-50 border-green-100'
+        : cameraGranted === false
+          ? 'bg-amber-50 border-amber-100'
+          : 'bg-gray-50 border-gray-100'
         }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

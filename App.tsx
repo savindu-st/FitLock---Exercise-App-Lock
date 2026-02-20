@@ -38,11 +38,13 @@ const App: React.FC = () => {
 
   const checkCameraPermission = async (): Promise<boolean> => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach(track => track.stop());
-      return true;
+      // Use permissions API to check without acquiring the camera
+      // This avoids a race condition with MediaPipe's Camera utility
+      const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+      return result.state === 'granted';
     } catch {
-      return false;
+      // Fallback: if permissions API isn't available, check our localStorage flag
+      return isCameraPermissionAsked();
     }
   };
 
