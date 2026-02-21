@@ -9,6 +9,7 @@ import AppLockSettingsScreen from './components/Screens/AppLockSettingsScreen';
 import HistoryScreen from './components/Screens/HistoryScreen';
 import PrivacyPolicyScreen from './components/Screens/PrivacyPolicyScreen';
 import CameraPermissionScreen from './components/Screens/CameraPermissionScreen';
+import PermissionsScreen from './components/Screens/PermissionsScreen';
 import { Settings, CheckCircle } from 'lucide-react';
 
 import { registerPlugin } from '@capacitor/core';
@@ -29,6 +30,7 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory());
   const [cameraGranted, setCameraGranted] = useState<boolean | null>(null);
   const [isLoadingApps, setIsLoadingApps] = useState(true);
+  const [previousScreen, setPreviousScreen] = useState<ScreenName>(ScreenName.HOME);
 
   // Fetch real apps and merge with saved lock settings
   useEffect(() => {
@@ -272,6 +274,9 @@ const App: React.FC = () => {
       case ScreenName.CAMERA_PERMISSION:
         return <CameraPermissionScreen onPermissionGranted={handleCameraPermissionDone} onSkip={handleCameraPermissionDone} />;
 
+      case ScreenName.PERMISSIONS:
+        return <PermissionsScreen onBack={() => setCurrentScreen(previousScreen)} />;
+
       default:
         return <HomeScreen apps={apps} onAppClick={handleAppClick} />;
     }
@@ -300,6 +305,7 @@ const App: React.FC = () => {
       case ScreenName.HISTORY: return "Workout History";
       case ScreenName.PROFILE: return "Profile";
       case ScreenName.PRIVACY_POLICY: return "Privacy Policy";
+      case ScreenName.PERMISSIONS: return "Permissions";
       default: return "FitLock Launcher";
     }
   };
@@ -315,7 +321,13 @@ const App: React.FC = () => {
             else setCurrentScreen(screen);
           }}
           actions={
-            <button className="p-2 text-white/90 hover:text-white transition-colors">
+            <button
+              className="p-2 text-white/90 hover:text-white transition-colors"
+              onClick={() => {
+                setPreviousScreen(currentScreen);
+                setCurrentScreen(ScreenName.PERMISSIONS);
+              }}
+            >
               <Settings size={20} />
             </button>
           }
