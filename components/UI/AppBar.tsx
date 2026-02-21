@@ -8,14 +8,14 @@ interface AppBarProps {
 
 const AppBar: React.FC<AppBarProps> = ({ title, leading, actions }) => {
   return (
-    <header className="h-16 bg-blue-600 shadow-md flex items-center px-4 justify-between shrink-0 z-20">
-      <div className="flex items-center gap-4">
+    <header className="h-14 bg-gradient-to-r from-blue-600 to-blue-700 shadow-md flex items-center px-4 justify-between shrink-0 z-20">
+      <div className="flex items-center gap-3">
         {leading && (
-          <button className="p-1 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors">
+          <button className="p-1 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors focus:outline-none">
             {leading}
           </button>
         )}
-        <h1 className="text-xl font-medium text-white tracking-wide">{title}</h1>
+        <h1 className="text-lg font-semibold text-white tracking-wide">{title}</h1>
       </div>
       <div className="flex items-center gap-2">
         {actions}

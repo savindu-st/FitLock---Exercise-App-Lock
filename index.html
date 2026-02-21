@@ -19,10 +19,28 @@
       background-color: #f3f4f6;
       margin: 0;
       padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
       padding-left: env(safe-area-inset-left);
       padding-right: env(safe-area-inset-right);
       overscroll-behavior-y: none;
+    }
+
+    /* Remove all blue focus outlines globally */
+    *:focus {
+      outline: none !important;
+    }
+
+    button:focus,
+    a:focus,
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none !important;
+      box-shadow: none !important;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    * {
+      -webkit-tap-highlight-color: transparent;
     }
 
     .no-scrollbar::-webkit-scrollbar {

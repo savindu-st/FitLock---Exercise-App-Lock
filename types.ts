@@ -14,9 +14,11 @@ export enum ScreenName {
 export interface AppItem {
   id: string;
   name: string;
+  packageName: string;
   iconColor: string;
   isLocked: boolean;
   requiredReps: number;
+  icon?: string; // Base64 icon string
 }
 
 export interface NavItem {

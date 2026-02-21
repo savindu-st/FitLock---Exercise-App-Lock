@@ -11,39 +11,136 @@ import PrivacyPolicyScreen from './components/Screens/PrivacyPolicyScreen';
 import CameraPermissionScreen from './components/Screens/CameraPermissionScreen';
 import { Settings, CheckCircle } from 'lucide-react';
 
-const INITIAL_APPS: AppItem[] = [
-  { id: '1', name: 'Facebook', iconColor: 'bg-blue-600', isLocked: true, requiredReps: 5 },
-  { id: '2', name: 'Instagram', iconColor: 'bg-pink-600', isLocked: true, requiredReps: 5 },
-  { id: '3', name: 'WhatsApp', iconColor: 'bg-green-500', isLocked: false, requiredReps: 0 },
-  { id: '4', name: 'Gallery', iconColor: 'bg-purple-500', isLocked: true, requiredReps: 3 },
-  { id: '5', name: 'Twitter', iconColor: 'bg-sky-400', isLocked: false, requiredReps: 0 },
-  { id: '6', name: 'Chrome', iconColor: 'bg-yellow-500', isLocked: false, requiredReps: 0 },
-  { id: '7', name: 'Gmail', iconColor: 'bg-red-500', isLocked: true, requiredReps: 3 },
-  { id: '8', name: 'Maps', iconColor: 'bg-green-600', isLocked: false, requiredReps: 0 },
-  { id: '9', name: 'Camera', iconColor: 'bg-gray-500', isLocked: false, requiredReps: 0 },
-];
+import { registerPlugin } from '@capacitor/core';
+
+interface InstalledAppsPlugin {
+  getApps(): Promise<{ apps: Array<{ name: string; packageName: string; icon: string }> }>;
+}
+
+const InstalledApps = registerPlugin<InstalledAppsPlugin>('InstalledApps');
 
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>(
     isCameraPermissionAsked() ? ScreenName.HOME : ScreenName.CAMERA_PERMISSION
   );
-  const [apps, setApps] = useState<AppItem[]>(() => loadApps() || INITIAL_APPS);
+  const [apps, setApps] = useState<AppItem[]>([]);
   const [targetApp, setTargetApp] = useState<AppItem | null>(null);
   const [pendingLockApp, setPendingLockApp] = useState<AppItem | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory());
+  const [cameraGranted, setCameraGranted] = useState<boolean | null>(null);
+  const [isLoadingApps, setIsLoadingApps] = useState(true);
+
+  // Fetch real apps and merge with saved lock settings
+  useEffect(() => {
+    const fetchApps = async () => {
+      setIsLoadingApps(true);
+      try {
+        const savedApps = loadApps() || [];
+        const response = await InstalledApps.getApps() as any;
+        const applications = response?.apps || [];
+
+        // Merge real apps with saved settings
+        const mergedApps: AppItem[] = applications.map((app: any) => {
+          const pkgName = app.packageName || '';
+          const saved = savedApps.find((s: AppItem) => s.packageName === pkgName);
+          return {
+            id: pkgName,
+            name: app.name || pkgName,
+            packageName: pkgName,
+            icon: app.icon || '',
+            iconColor: saved?.iconColor || 'bg-blue-500',
+            isLocked: saved?.isLocked || false,
+            requiredReps: saved?.requiredReps || 5
+          };
+        });
+
+        // Sort apps alphabetically by name
+        mergedApps.sort((a, b) => a.name.localeCompare(b.name));
+
+        setApps(mergedApps);
+      } catch (err) {
+        console.error('Failed to fetch installed apps:', err);
+        // Fallback to saved apps if native plugin fails (e.g. in browser)
+        setApps(loadApps() || []);
+      } finally {
+        setIsLoadingApps(false);
+      }
+    };
+
+    fetchApps();
+  }, []);
 
   // Auto-save apps and history to localStorage
   useEffect(() => { saveApps(apps); }, [apps]);
   useEffect(() => { saveHistory(history); }, [history]);
 
+  // Initial permission check and skip onboarding if already granted
+  useEffect(() => {
+    const checkInitialPermission = async () => {
+      let isGranted = false;
+
+      // Layer 1: Permissions API
+      try {
+        if ('permissions' in navigator) {
+          const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          if (result.state === 'granted') isGranted = true;
+
+          // Listen for permission changes
+          result.onchange = () => {
+            const newState = result.state === 'granted';
+            setCameraGranted(newState);
+            if (newState) setCameraPermissionAsked();
+          };
+        }
+      } catch (err) {
+        console.warn('Permissions API check failed:', err);
+      }
+
+      // Layer 2: Device Enumeration (more reliable in some WebViews)
+      // If we have labels, we definitely have permission
+      try {
+        if (!isGranted && 'mediaDevices' in navigator && 'enumerateDevices' in navigator.mediaDevices) {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const hasLabel = devices.some(device => device.kind === 'videoinput' && device.label);
+          if (hasLabel) isGranted = true;
+        }
+      } catch (err) {
+        console.warn('enumerateDevices check failed:', err);
+      }
+
+      // If either check passed, or we previously successfully asked (and the above didn't explicitly say denied)
+      if (isGranted) {
+        setCameraGranted(true);
+        setCameraPermissionAsked();
+        setCurrentScreen(prev => prev === ScreenName.CAMERA_PERMISSION ? ScreenName.HOME : prev);
+      } else {
+        setCameraGranted(false);
+      }
+    };
+
+    checkInitialPermission();
+  }, []);
+
   const checkCameraPermission = async (): Promise<boolean> => {
+    // Return early if we already have a confirmed granted state
+    if (cameraGranted === true) return true;
+
     try {
-      // Use permissions API to check without acquiring the camera
-      // This avoids a race condition with MediaPipe's Camera utility
-      const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
-      return result.state === 'granted';
+      // 1. Check Permissions API
+      if ('permissions' in navigator) {
+        const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        if (result.state === 'granted') return true;
+      }
+
+      // 2. Check enumerateDevices (if we have labels, we have permission)
+      if ('mediaDevices' in navigator && 'enumerateDevices' in navigator.mediaDevices) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        if (devices.some(device => device.kind === 'videoinput' && device.label)) return true;
+      }
+
+      // 3. Fallback to localStorage flag
+      return isCameraPermissionAsked();
     } catch {
-      // Fallback: if permissions API isn't available, check our localStorage flag
       return isCameraPermissionAsked();
     }
   };
@@ -51,7 +148,8 @@ const App: React.FC = () => {
   const handleAppClick = useCallback(async (app: AppItem) => {
     if (app.isLocked) {
       // Check camera permission before going to lock challenge
-      const hasCamera = await checkCameraPermission();
+      // Use permissions API check first, then fallback to local state
+      const hasCamera = cameraGranted ?? (await checkCameraPermission());
       if (!hasCamera) {
         // Camera not available — show permission screen, then go to lock after
         setPendingLockApp(app);
@@ -101,6 +199,7 @@ const App: React.FC = () => {
 
   const handleCameraPermissionDone = useCallback(() => {
     setCameraPermissionAsked();
+    setCameraGranted(true);
     // If there's a pending locked app, go directly to the lock challenge
     if (pendingLockApp) {
       setTargetApp(pendingLockApp);
@@ -119,10 +218,26 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (currentScreen) {
       case ScreenName.HOME:
+        if (isLoadingApps) {
+          return (
+            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-sm text-gray-500 font-medium">Loading apps...</p>
+            </div>
+          );
+        }
         return <HomeScreen apps={apps} onAppClick={handleAppClick} />;
 
       case ScreenName.SETTINGS:
-        return <AppLockSettingsScreen apps={apps} onUpdateApp={handleUpdateApp} onRequestCamera={handleRequestCameraFromSettings} />;
+        if (isLoadingApps) {
+          return (
+            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-sm text-gray-500 font-medium">Scanning system apps...</p>
+            </div>
+          );
+        }
+        return <AppLockSettingsScreen apps={apps} onUpdateApp={handleUpdateApp} onRequestCamera={handleRequestCameraFromSettings} cameraGranted={cameraGranted} />;
 
       case ScreenName.HISTORY:
         return <HistoryScreen history={history} />;

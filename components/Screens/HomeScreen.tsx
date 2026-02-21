@@ -24,43 +24,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick }) => {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">My Apps</h2>
-        <p className="text-gray-500 text-sm">Select an app to open</p>
+    <div className="px-4 pt-4 pb-2">
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-gray-800">My Apps</h2>
+        <p className="text-gray-400 text-xs">Select an app to open</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-3 gap-y-5 gap-x-4">
         {apps.map((app) => (
           <button
             key={app.id}
             onClick={() => onAppClick(app)}
-            className="flex flex-col items-center gap-2 group relative"
+            className="flex flex-col items-center group active:scale-95 transition-transform focus:outline-none"
           >
-            <div 
-              className={`
-                w-16 h-16 rounded-2xl flex items-center justify-center shadow-md transition-transform active:scale-95 group-hover:scale-105
-                ${app.iconColor} relative overflow-hidden
-              `}
-            >
-              {getIcon(app.name)}
-              
-              {/* Lock Overlay */}
+            <div className={`relative w-[60px] h-[60px] rounded-[18px] ${app.icon ? 'bg-transparent' : app.iconColor} flex items-center justify-center mb-1.5 overflow-hidden`}>
+              {app.icon ? (
+                <img src={app.icon} alt={app.name} className="w-full h-full object-cover" />
+              ) : (
+                getIcon(app.name)
+              )}
               {app.isLocked && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
-                  <Lock size={20} className="text-white" />
+                <div className="absolute inset-0 bg-black/25 flex items-center justify-center backdrop-blur-[1px]">
+                  <Lock size={18} className="text-white drop-shadow-md" />
                 </div>
               )}
             </div>
-            <span className="text-xs font-medium text-gray-700">{app.name}</span>
+            <span className="text-[11px] font-medium text-gray-600 truncate w-full text-center leading-tight">{app.name}</span>
           </button>
         ))}
       </div>
 
-      <div className="mt-12 bg-blue-50 p-4 rounded-xl border border-blue-100">
-        <h3 className="font-bold text-blue-800 mb-1">FitLock Active</h3>
-        <p className="text-xs text-blue-600">
-          Selected apps are protected by FitLock AI. Perform pushups to unlock access.
+      <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border border-blue-100/60">
+        <h3 className="font-bold text-blue-700 text-sm mb-0.5">FitLock Active</h3>
+        <p className="text-xs text-blue-500/80">
+          Protected apps require exercise to unlock.
         </p>
       </div>
     </div>
