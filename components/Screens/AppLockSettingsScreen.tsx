@@ -37,10 +37,10 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
   };
 
   return (
-    <div className="p-4 space-y-4 pb-24 h-full flex flex-col">
+    <div className="p-4 space-y-4 pb-4">
       {/* Camera Access Section - Only show if not granted */}
       {cameraGranted !== true && (
-        <div className={`p-4 rounded-xl border flex-shrink-0 ${cameraGranted === false
+        <div className={`p-4 rounded-xl border ${cameraGranted === false
           ? 'bg-amber-50 border-amber-100'
           : 'bg-gray-50 border-gray-100'
           }`}>
@@ -70,7 +70,7 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
         </div>
       )}
 
-      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex-shrink-0">
+      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
         <h3 className="font-bold text-blue-800 text-sm mb-1">Manage Protected Apps</h3>
         <p className="text-xs text-blue-600">
           Enable the lock switch to protect an app. Set the number of reps required to unlock it.
@@ -78,7 +78,7 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
       </div>
 
       {/* Search Input */}
-      <div className="relative flex-shrink-0">
+      <div className="relative">
         <input
           type="text"
           placeholder="Search apps..."
@@ -96,7 +96,7 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-1 no-scrollbar min-h-0">
+      <div>
         {filteredApps.length > 0 ? (
           <div className="space-y-3">
             {filteredApps.map(app => (

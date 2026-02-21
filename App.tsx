@@ -108,10 +108,10 @@ const App: React.FC = () => {
         console.warn('enumerateDevices check failed:', err);
       }
 
-      // If either check passed, or we previously successfully asked (and the above didn't explicitly say denied)
-      if (isGranted) {
+      // If either check passed, or we previously asked and it was granted
+      if (isGranted || isCameraPermissionAsked()) {
         setCameraGranted(true);
-        setCameraPermissionAsked();
+        if (!isCameraPermissionAsked()) setCameraPermissionAsked();
         setCurrentScreen(prev => prev === ScreenName.CAMERA_PERMISSION ? ScreenName.HOME : prev);
       } else {
         setCameraGranted(false);
@@ -305,8 +305,8 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center">
-      <div className="w-full h-[100dvh] sm:h-[800px] sm:w-[400px] sm:rounded-3xl sm:border-8 sm:border-gray-900 bg-white overflow-hidden shadow-2xl relative flex flex-col">
+    <div className="h-full w-full flex items-center justify-center">
+      <div className="w-full h-full sm:h-[800px] sm:w-[400px] sm:rounded-3xl sm:border-8 sm:border-gray-900 bg-white overflow-hidden shadow-2xl relative flex flex-col">
         <MobileLayout
           title={getTitle()}
           currentScreen={currentScreen}

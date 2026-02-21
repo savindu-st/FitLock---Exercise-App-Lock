@@ -17,8 +17,8 @@ const NAV_ITEMS: NavItem[] = [
 const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate }) => {
   return (
     <nav
-      className="bg-white border-t border-gray-200 flex items-start justify-around px-2 pt-2 shrink-0 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)' }}
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex items-start justify-around px-2 pt-2 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+      style={{ paddingBottom: 'var(--nav-bar-height, 0px)' }}
     >
       {NAV_ITEMS.map((item) => {
         const isActive = currentScreen === item.id;

@@ -21,8 +21,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
 }) => {
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Status Bar Mock (for desktop visuals) */}
-      <div className="h-0 sm:h-7 bg-blue-800 w-full shrink-0" />
+
 
       <AppBar
         title={title}
@@ -32,7 +31,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
 
       <main
         className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth no-scrollbar"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}
+        style={{ paddingBottom: 'calc(var(--nav-bar-height, 0px) + 80px)' }}
       >
         {children}
       </main>
