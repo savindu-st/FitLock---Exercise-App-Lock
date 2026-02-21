@@ -4,7 +4,26 @@ const STORAGE_KEYS = {
     APPS: 'fitlock_apps',
     HISTORY: 'fitlock_history',
     PROFILE: 'fitlock_profile',
+    CAMERA_ASKED: 'fitlock_camera_asked',
 } as const;
+
+// --- Camera Permission ---
+export const setCameraPermissionAsked = (): void => {
+    try {
+        localStorage.setItem(STORAGE_KEYS.CAMERA_ASKED, 'true');
+    } catch (e) {
+        console.error('Failed to save camera permission flag:', e);
+    }
+};
+
+export const isCameraPermissionAsked = (): boolean => {
+    try {
+        return localStorage.getItem(STORAGE_KEYS.CAMERA_ASKED) === 'true';
+    } catch (e) {
+        console.error('Failed to load camera permission flag:', e);
+        return false;
+    }
+};
 
 // --- Apps ---
 export const saveApps = (apps: AppItem[]): void => {

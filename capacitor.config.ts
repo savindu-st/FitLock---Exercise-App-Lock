@@ -4,11 +4,12 @@ const config: CapacitorConfig = {
   appId: 'com.savindu.fitlock',
   appName: 'FitLock',
   webDir: 'dist',
+  server: {
+    androidScheme: 'https',
+    allowNavigation: ['*'],
+  },
   android: {
     allowMixedContent: true,
-  },
-  server: {
-    androidScheme: 'https'
   }
 };
 

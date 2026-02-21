@@ -57,6 +57,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
   const [reps, setReps] = useState(0);
   const [feedback, setFeedback] = useState("Get into position");
   const [loading, setLoading] = useState(true);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [exerciseState, setExerciseState] = useState<ExerciseState>(ExerciseState.IDLE);
   const [activeExercise, setActiveExercise] = useState<ExerciseType>(ExerciseType.PUSHUPS);
   const [showInfo, setShowInfo] = useState(false);
@@ -228,44 +229,131 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
     };
 
     const initMediaPipe = async () => {
-      if (!window.Pose) {
-        console.error("MediaPipe Pose not loaded");
-        return;
-      }
+      try {
+        console.log('[FitLock] Step 1: Checking MediaPipe globals...');
 
-      // Use local mediapipe files for offline support
-      pose = new window.Pose({
-        locateFile: (file: string) => `./mediapipe/${file}`,
-      });
+        if (!window.Pose) {
+          setCameraError('Exercise AI failed to load. Please restart the app.');
+          return;
+        }
 
-      pose.setOptions({
-        modelComplexity: 1,
-        smoothLandmarks: true,
-        enableSegmentation: false,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
-
-      pose.onResults(onResults);
-
-      if (videoRef.current) {
-        camera = new window.Camera(videoRef.current, {
-          onFrame: async () => {
-            if (videoRef.current) {
-              await pose.send({ image: videoRef.current });
-            }
-          },
-          width: 640,
-          height: 480
+        console.log('[FitLock] Step 2: Creating Pose instance...');
+        pose = new window.Pose({
+          locateFile: (file: string) => `./mediapipe/${file}`,
         });
-        camera.start();
+
+        console.log('[FitLock] Step 3: Setting options...');
+        pose.setOptions({
+          modelComplexity: 0,
+          smoothLandmarks: true,
+          enableSegmentation: false,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+
+        pose.onResults(onResults);
+        console.log('[FitLock] Step 4: Pose configured.');
+
+        if (!videoRef.current) {
+          setCameraError('Camera element not ready. Please go back and try again.');
+          return;
+        }
+
+        // Get camera stream
+        console.log('[FitLock] Step 5: Requesting camera...');
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, facingMode: 'user' }
+          });
+          console.log('[FitLock] Step 5 OK: Got stream');
+        } catch (camErr: any) {
+          setCameraError(`Camera access denied: ${camErr?.message || 'Unknown'}. Please grant camera permission.`);
+          return;
+        }
+
+        // Assign stream and wait for video to actually have pixel data
+        console.log('[FitLock] Step 6: Waiting for video data...');
+        const video = videoRef.current;
+        video.srcObject = stream;
+
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Video load timeout')), 10000);
+          video.onloadeddata = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+          video.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error('Video element error'));
+          };
+          video.play().catch(reject);
+        });
+
+        console.log('[FitLock] Step 6 OK: Video ready, size:', video.videoWidth, 'x', video.videoHeight);
+
+        // Initialize pose model by sending one frame and waiting
+        console.log('[FitLock] Step 7: Initializing pose model with first frame...');
+        try {
+          await pose.send({ image: video });
+          console.log('[FitLock] Step 7 OK: First frame processed');
+        } catch (e) {
+          console.warn('[FitLock] Step 7 WARN: First frame failed, retrying...', e);
+          // Wait a bit and retry
+          await new Promise(r => setTimeout(r, 1000));
+          await pose.send({ image: video });
+          console.log('[FitLock] Step 7 OK: Retry succeeded');
+        }
+
+        // Non-blocking frame loop: skip frames while pose is still processing
+        console.log('[FitLock] Step 8: Starting frame loop...');
+        let running = true;
+        let processing = false;
+        const processFrame = () => {
+          if (!running || !videoRef.current || !pose) return;
+          if (!processing) {
+            processing = true;
+            pose.send({ image: videoRef.current }).then(() => {
+              processing = false;
+            }).catch((e: any) => {
+              processing = false;
+              console.error('[FitLock] Frame error:', e);
+            });
+          }
+          if (running) {
+            requestAnimationFrame(processFrame);
+          }
+        };
+        requestAnimationFrame(processFrame);
+
+        // Store cleanup
+        camera = {
+          stop: () => {
+            running = false;
+            stream.getTracks().forEach(t => t.stop());
+            if (pose) pose.close();
+          }
+        } as any;
+
+      } catch (err: any) {
+        console.error('[FitLock] initMediaPipe FATAL:', err);
+        setCameraError(`Camera failed: ${err?.message || 'Unknown error'}`);
       }
     };
 
+    // Timeout: if still loading after 15s, show error
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.error('[FitLock] TIMEOUT: Camera init took too long');
+        setCameraError('Camera initialization timed out. Please go back and try again.');
+      }
+    }, 15000);
+
     // Small delay to ensure scripts loaded
-    setTimeout(initMediaPipe, 1000);
+    setTimeout(initMediaPipe, 500);
 
     return () => {
+      clearTimeout(timeoutId);
       if (camera) camera.stop();
       if (pose) pose.close();
     };
@@ -318,9 +406,27 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
       <div className="relative flex-1 bg-black overflow-hidden flex items-center justify-center">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-gray-900">
-            <div className="flex flex-col items-center">
-              <RefreshCw className="animate-spin mb-4 text-blue-500" size={32} />
-              <p className="text-gray-400">Starting AI Camera...</p>
+            <div className="flex flex-col items-center px-6 text-center">
+              {cameraError ? (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+                    <X size={32} className="text-red-400" />
+                  </div>
+                  <p className="text-red-400 font-medium mb-2">Camera Error</p>
+                  <p className="text-gray-400 text-sm max-w-xs">{cameraError}</p>
+                  <button
+                    onClick={onCancel}
+                    className="mt-6 px-6 py-2 bg-gray-700 text-white rounded-xl text-sm font-medium hover:bg-gray-600 transition-colors"
+                  >
+                    Go Back
+                  </button>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="animate-spin mb-4 text-blue-500" size={32} />
+                  <p className="text-gray-400">Starting AI Camera...</p>
+                </>
+              )}
             </div>
           </div>
         )}
