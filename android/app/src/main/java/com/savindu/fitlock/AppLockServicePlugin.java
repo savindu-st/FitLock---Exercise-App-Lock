@@ -25,6 +25,10 @@ public class AppLockServicePlugin extends Plugin {
     private static final String KEY_LOCKED_APPS = "locked_apps_json";
     private static final String KEY_TEMP_UNLOCKED = "temp_unlocked_apps";
 
+    // Static pending challenge so MainActivity can set it before Capacitor
+    // initializes
+    public static Intent pendingChallenge;
+
     @PluginMethod
     public void startService(PluginCall call) {
         try {
@@ -98,6 +102,47 @@ public class AppLockServicePlugin extends Plugin {
             call.resolve();
         } catch (Exception e) {
             call.reject("Failed to clear temp unlocks: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void getPendingChallenge(PluginCall call) {
+        JSObject result = new JSObject();
+        if (pendingChallenge != null) {
+            result.put("action", pendingChallenge.getStringExtra("action"));
+            result.put("locked_package", pendingChallenge.getStringExtra("locked_package"));
+            result.put("locked_app_name", pendingChallenge.getStringExtra("locked_app_name"));
+            result.put("required_reps", pendingChallenge.getIntExtra("required_reps", 5));
+            // Clear it so it only fires once
+            pendingChallenge = null;
+            result.put("hasChallenge", true);
+        } else {
+            result.put("hasChallenge", false);
+        }
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void exitToApp(PluginCall call) {
+        try {
+            String packageName = call.getString("packageName", "");
+
+            // If they provided a package name, try to launch it
+            if (!packageName.isEmpty()) {
+                Intent launchIntent = getContext().getPackageManager().getLaunchIntentForPackage(packageName);
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getContext().startActivity(launchIntent);
+                }
+            }
+
+            // Push FitLock to the background (simulate pressing Home)
+            if (getActivity() != null) {
+                getActivity().moveTaskToBack(true);
+            }
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Failed to exit to app: " + e.getMessage());
         }
     }
 

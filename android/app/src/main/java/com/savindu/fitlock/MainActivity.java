@@ -9,6 +9,14 @@ import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
+    public void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        if (intent != null && intent.hasExtra("action") && "lock_challenge".equals(intent.getStringExtra("action"))) {
+            AppLockServicePlugin.pendingChallenge = intent;
+        }
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         // Register custom plugins before super.onCreate
         registerPlugin(InstalledAppsPlugin.class);
@@ -16,6 +24,12 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AppLockServicePlugin.class);
 
         super.onCreate(savedInstanceState);
+
+        // Capture initial intent if launched cold
+        android.content.Intent intent = getIntent();
+        if (intent != null && intent.hasExtra("action") && "lock_challenge".equals(intent.getStringExtra("action"))) {
+            AppLockServicePlugin.pendingChallenge = intent;
+        }
 
         // Get the WebView and inject the system navigation bar height as a CSS variable
         // This is needed because targetSdk 35+ enforces edge-to-edge and

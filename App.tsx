@@ -11,7 +11,6 @@ import PrivacyPolicyScreen from './components/Screens/PrivacyPolicyScreen';
 import CameraPermissionScreen from './components/Screens/CameraPermissionScreen';
 import PermissionsScreen from './components/Screens/PermissionsScreen';
 import { Settings, CheckCircle } from 'lucide-react';
-
 import { registerPlugin } from '@capacitor/core';
 
 interface InstalledAppsPlugin {
@@ -25,10 +24,13 @@ interface AppLockServicePlugin {
   updateLockedApps(options: { apps: string }): Promise<void>;
   addTempUnlock(options: { packageName: string }): Promise<void>;
   clearTempUnlocks(): Promise<void>;
+  getPendingChallenge(): Promise<{ hasChallenge: boolean, action?: string, locked_package?: string, locked_app_name?: string, required_reps?: number }>;
+  exitToApp(options: { packageName: string }): Promise<void>;
 }
 
 const InstalledApps = registerPlugin<InstalledAppsPlugin>('InstalledApps');
 const AppLockService = registerPlugin<AppLockServicePlugin>('AppLockService');
+import { App as CapacitorApp } from '@capacitor/app';
 
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>(
@@ -114,6 +116,40 @@ const App: React.FC = () => {
     // Small delay to ensure app is initialized
     const timer = setTimeout(startMonitoring, 2000);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Poll for deep-linked challenges from native
+  useEffect(() => {
+    const checkPendingChallenge = async () => {
+      try {
+        const result = await AppLockService.getPendingChallenge();
+        if (result.hasChallenge && result.action === 'lock_challenge') {
+          // A challenge was initiated natively via the lock overlay 
+          setTargetApp({
+            id: result.locked_package || '',
+            name: result.locked_app_name || 'App',
+            packageName: result.locked_package || '',
+            icon: '',
+            iconColor: 'bg-blue-500',
+            isLocked: true,
+            requiredReps: result.required_reps || 5
+          });
+          setCurrentScreen(ScreenName.LOCK_CHALLENGE);
+        }
+      } catch (err) {
+        console.warn('Failed to check pending challenge', err);
+      }
+    };
+
+    // Check on mount
+    checkPendingChallenge();
+
+    // Check whenever app resumes
+    const sub = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) checkPendingChallenge();
+    });
+
+    return () => { sub.then(s => s.remove()); };
   }, []);
 
   // Initial permission check and skip onboarding if already granted
@@ -225,19 +261,27 @@ const App: React.FC = () => {
         setHistory(prev => [newItem, ...prev]);
 
         // Temporarily unlock the app in native service so it doesn't re-trigger
-        AppLockService.addTempUnlock({ packageName: prevTarget.packageName }).catch(err =>
-          console.warn('Failed to add temp unlock:', err)
-        );
+        AppLockService.addTempUnlock({ packageName: prevTarget.packageName })
+          .then(() => {
+            // Instantly launch the locked app and background FitLock
+            return AppLockService.exitToApp({ packageName: prevTarget.packageName });
+          })
+          .catch(err => console.warn('Failed to add temp unlock or exit:', err));
       }
       return prevTarget;
     });
-    setCurrentScreen(ScreenName.APP_CONTENT);
+    // We don't go to APP_CONTENT anymore, we just exit entirely via native plugin
   }, []);
 
   const handleCancelLock = useCallback(() => {
-    setTargetApp(null);
-    setCurrentScreen(ScreenName.HOME);
-  }, []);
+    // If we're deep-linked over an app, cancelling should dump us back to home, not FitLock Home
+    if (targetApp && !targetApp.icon) {
+      AppLockService.exitToApp({ packageName: '' });
+    } else {
+      setTargetApp(null);
+      setCurrentScreen(ScreenName.HOME);
+    }
+  }, [targetApp]);
 
   const handleBackToHome = useCallback(() => {
     setTargetApp(null);
@@ -267,7 +311,7 @@ const App: React.FC = () => {
       case ScreenName.HOME:
         if (isLoadingApps) {
           return (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
               <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
               <p className="text-sm text-gray-500 font-medium">Loading apps...</p>
             </div>
@@ -278,7 +322,7 @@ const App: React.FC = () => {
       case ScreenName.SETTINGS:
         if (isLoadingApps) {
           return (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
               <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
               <p className="text-sm text-gray-500 font-medium">Scanning system apps...</p>
             </div>

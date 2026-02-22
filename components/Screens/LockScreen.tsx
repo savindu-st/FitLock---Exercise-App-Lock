@@ -213,7 +213,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
       ctx.restore();
 
       // Check win condition
-      if (countRef.current >= app.requiredReps) {
+      if (countRef.current >= app.requiredReps && stateRef.current !== ExerciseState.COMPLETED) {
         setFeedback("Access Granted!");
         setExerciseState(ExerciseState.COMPLETED);
         // Stop counting

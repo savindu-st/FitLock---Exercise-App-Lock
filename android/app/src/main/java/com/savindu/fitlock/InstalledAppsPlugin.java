@@ -42,10 +42,10 @@ public class InstalledAppsPlugin extends Plugin {
                 try {
                     Drawable icon = pm.getApplicationIcon(appInfo.packageName);
                     Bitmap bitmap = getBitmapFromDrawable(icon);
-                    // Scale down to 48x48 to reduce memory
-                    Bitmap scaled = Bitmap.createScaledBitmap(bitmap, 48, 48, true);
+                    // Scale down to 144x144 to retain higher quality on HD displays
+                    Bitmap scaled = Bitmap.createScaledBitmap(bitmap, 144, 144, true);
                     ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                    scaled.compress(Bitmap.CompressFormat.PNG, 80, stream);
+                    scaled.compress(Bitmap.CompressFormat.PNG, 100, stream);
                     String base64 = Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP);
                     appObj.put("icon", "data:image/png;base64," + base64);
                     if (bitmap != scaled)
@@ -70,9 +70,9 @@ public class InstalledAppsPlugin extends Plugin {
         int width = drawable.getIntrinsicWidth();
         int height = drawable.getIntrinsicHeight();
         if (width <= 0)
-            width = 48;
+            width = 144;
         if (height <= 0)
-            height = 48;
+            height = 144;
         Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bmp);
         drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
