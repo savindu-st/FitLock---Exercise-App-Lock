@@ -239,7 +239,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
 
         console.log('[FitLock] Step 2: Creating Pose instance...');
         pose = new window.Pose({
-          locateFile: (file: string) => `./mediapipe/${file}`,
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
         });
 
         console.log('[FitLock] Step 3: Setting options...');

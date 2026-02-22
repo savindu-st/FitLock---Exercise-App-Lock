@@ -51,7 +51,11 @@ public class AppMonitorService extends Service {
         Log.d(TAG, "Service starting...");
 
         // Start as foreground service
-        startForeground(NOTIFICATION_ID, buildNotification());
+        try {
+            startForeground(NOTIFICATION_ID, buildNotification());
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start foreground service: " + e.getMessage());
+        }
 
         if (!isRunning) {
             isRunning = true;
