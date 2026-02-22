@@ -13,6 +13,7 @@ public class MainActivity extends BridgeActivity {
         // Register custom plugins before super.onCreate
         registerPlugin(InstalledAppsPlugin.class);
         registerPlugin(PermissionsPlugin.class);
+        registerPlugin(AppLockServicePlugin.class);
 
         super.onCreate(savedInstanceState);
 

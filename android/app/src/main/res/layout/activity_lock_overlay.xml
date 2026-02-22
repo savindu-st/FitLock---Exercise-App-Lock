@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#111827"
+    android:padding="32dp">
+
+    <!-- Lock Icon -->
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@android:drawable/ic_lock_lock"
+        android:layout_marginBottom="24dp"
+        android:contentDescription="Locked"
+        android:background="@android:color/transparent" />
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/lockTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="App is Locked"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Subtitle -->
+    <TextView
+        android:id="@+id/lockSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Complete an exercise challenge to unlock"
+        android:textColor="#9CA3AF"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Reps Info -->
+    <TextView
+        android:id="@+id/lockRepsInfo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="5 reps required"
+        android:textColor="#60A5FA"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:background="#1E3A5F"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="8dp"
+        android:layout_marginBottom="48dp" />
+
+    <!-- Complete Exercise Button -->
+    <Button
+        android:id="@+id/btnCompleteExercise"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="Complete Exercise"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        android:backgroundTint="#2563EB"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Go Back Button -->
+    <Button
+        android:id="@+id/btnGoBack"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="Go Back"
+        android:textColor="#9CA3AF"
+        android:textSize="14sp"
+        android:textAllCaps="false"
+        android:backgroundTint="#1F2937" />
+
+</LinearLayout>

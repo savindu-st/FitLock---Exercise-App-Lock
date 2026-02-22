@@ -18,7 +18,17 @@ interface InstalledAppsPlugin {
   getApps(): Promise<{ apps: Array<{ name: string; packageName: string; icon: string }> }>;
 }
 
+interface AppLockServicePlugin {
+  startService(): Promise<void>;
+  stopService(): Promise<void>;
+  isServiceRunning(): Promise<{ running: boolean }>;
+  updateLockedApps(options: { apps: string }): Promise<void>;
+  addTempUnlock(options: { packageName: string }): Promise<void>;
+  clearTempUnlocks(): Promise<void>;
+}
+
 const InstalledApps = registerPlugin<InstalledAppsPlugin>('InstalledApps');
+const AppLockService = registerPlugin<AppLockServicePlugin>('AppLockService');
 
 const App: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>(
@@ -75,6 +85,36 @@ const App: React.FC = () => {
   // Auto-save apps and history to localStorage
   useEffect(() => { saveApps(apps); }, [apps]);
   useEffect(() => { saveHistory(history); }, [history]);
+
+  // Sync locked apps to native SharedPreferences whenever apps change
+  useEffect(() => {
+    const syncLockedApps = async () => {
+      try {
+        const lockedApps = apps
+          .filter(a => a.isLocked)
+          .map(a => ({ packageName: a.packageName, name: a.name, requiredReps: a.requiredReps }));
+        await AppLockService.updateLockedApps({ apps: JSON.stringify(lockedApps) });
+      } catch (err) {
+        console.warn('Failed to sync locked apps to native:', err);
+      }
+    };
+    if (apps.length > 0) syncLockedApps();
+  }, [apps]);
+
+  // Auto-start monitoring service on launch
+  useEffect(() => {
+    const startMonitoring = async () => {
+      try {
+        await AppLockService.startService();
+        console.log('[FitLock] App monitor service started');
+      } catch (err) {
+        console.warn('[FitLock] Failed to start monitor service:', err);
+      }
+    };
+    // Small delay to ensure app is initialized
+    const timer = setTimeout(startMonitoring, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Initial permission check and skip onboarding if already granted
   useEffect(() => {
@@ -183,6 +223,11 @@ const App: React.FC = () => {
           timestamp: Date.now()
         };
         setHistory(prev => [newItem, ...prev]);
+
+        // Temporarily unlock the app in native service so it doesn't re-trigger
+        AppLockService.addTempUnlock({ packageName: prevTarget.packageName }).catch(err =>
+          console.warn('Failed to add temp unlock:', err)
+        );
       }
       return prevTarget;
     });
