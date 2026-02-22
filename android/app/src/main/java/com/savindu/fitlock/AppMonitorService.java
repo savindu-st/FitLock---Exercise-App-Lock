@@ -131,6 +131,14 @@ public class AppMonitorService extends Service {
         if (packageName.equals(getPackageName()))
             return;
 
+        // Automatically relock apps if we switch away from a temporarily unlocked app
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        Set<String> tempUnlocked = new HashSet<>(prefs.getStringSet(KEY_TEMP_UNLOCKED, new HashSet<>()));
+        if (!tempUnlocked.isEmpty() && !tempUnlocked.contains(packageName)) {
+            Log.d(TAG, "User switched away from unlocked app. Clearing temporary unlocks.");
+            prefs.edit().putStringSet(KEY_TEMP_UNLOCKED, new HashSet<>()).apply();
+        }
+
         // Check if the app is locked
         if (!isAppLocked(packageName))
             return;

@@ -118,7 +118,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
           if (leftShoulder.visibility > 0.5 && leftElbow.visibility > 0.5 && leftWrist.visibility > 0.5) {
             const angle = calculateAngle(leftShoulder, leftElbow, leftWrist);
 
-            if (angle > 160) { // UP
+            if (angle > 140) { // UP
               if (stateRef.current === ExerciseState.DOWN) {
                 countRef.current += 1;
                 setReps(countRef.current);
@@ -128,7 +128,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
                 stateRef.current = ExerciseState.UP;
                 setFeedback("Start going down");
               }
-            } else if (angle < 90) { // DOWN
+            } else if (angle < 100) { // DOWN
               if (stateRef.current === ExerciseState.UP) {
                 stateRef.current = ExerciseState.DOWN;
                 setFeedback("Push UP!");
@@ -151,7 +151,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
             // Standing (UP) ~ 170-180
             // Squat (DOWN) < 100
 
-            if (angle > 160) { // STANDING
+            if (angle > 140) { // STANDING
               if (stateRef.current === ExerciseState.DOWN) {
                 countRef.current += 1;
                 setReps(countRef.current);
@@ -161,7 +161,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
                 stateRef.current = ExerciseState.UP;
                 setFeedback("Squat down");
               }
-            } else if (angle < 100) { // SQUATTING
+            } else if (angle < 110) { // SQUATTING
               if (stateRef.current === ExerciseState.UP) {
                 stateRef.current = ExerciseState.DOWN;
                 setFeedback("Stand UP!");
@@ -173,7 +173,8 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
 
         } else if (currentType === ExerciseType.JUMPING_JACKS) {
           // Jumping Jacks Logic
-          // Wrists vs Shoulders/Hips
+          // We need wrists to go above the head, and then back down below hips.
+          const nose = landmarks[0];
           const leftShoulder = landmarks[11];
           const rightShoulder = landmarks[12];
           const leftHip = landmarks[23];
@@ -184,9 +185,15 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
           const isVisible = [leftShoulder, rightShoulder, leftHip, rightHip, leftWrist, rightWrist].every(l => l.visibility > 0.5);
 
           if (isVisible) {
-            // Hands UP: Wrist y < Shoulder y (y increases downwards)
-            const handsUp = leftWrist.y < leftShoulder.y && rightWrist.y < rightShoulder.y;
-            // Hands DOWN: Wrist y > Hip y
+            // Determine a "head" or "top" threshold (y increases downwards)
+            const headY = (nose && nose.visibility > 0.5)
+              ? nose.y
+              : Math.min(leftShoulder.y, rightShoulder.y) - 0.15;
+
+            // Hands UP: Wrists go above the head
+            const handsUp = leftWrist.y < headY && rightWrist.y < headY;
+
+            // Hands DOWN: Wrists go down past the hips
             const handsDown = leftWrist.y > leftHip.y && rightWrist.y > rightHip.y;
 
             if (handsDown) { // DOWN (Start/End position)
@@ -206,7 +213,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
               }
             }
           } else {
-            setFeedback("Full body must be visible");
+            setFeedback("Upper body & hips must be visible");
           }
         }
       }
