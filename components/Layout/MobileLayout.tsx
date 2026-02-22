@@ -2,7 +2,6 @@ import React from 'react';
 import { ScreenName } from '../../types';
 import AppBar from '../UI/AppBar';
 import BottomNav from '../UI/BottomNav';
-import { Menu } from 'lucide-react';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -25,7 +24,6 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
 
       <AppBar
         title={title}
-        leading={<Menu size={24} className="text-white" />}
         actions={actions}
       />
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { ScreenName, AppItem, HistoryItem, ExerciseType } from './types';
 import { saveApps, loadApps, saveHistory, loadHistory, isCameraPermissionAsked, setCameraPermissionAsked } from './utils/storage';
 import MobileLayout from './components/Layout/MobileLayout';
@@ -43,6 +43,18 @@ const App: React.FC = () => {
   const [cameraGranted, setCameraGranted] = useState<boolean | null>(null);
   const [isLoadingApps, setIsLoadingApps] = useState(true);
   const [previousScreen, setPreviousScreen] = useState<ScreenName>(ScreenName.HOME);
+  const [backPressCount, setBackPressCount] = useState(0);
+
+  const currentScreenRef = useRef(currentScreen);
+  const targetAppRef = useRef(targetApp);
+
+  useEffect(() => {
+    currentScreenRef.current = currentScreen;
+  }, [currentScreen]);
+
+  useEffect(() => {
+    targetAppRef.current = targetApp;
+  }, [targetApp]);
 
   // Fetch real apps and merge with saved lock settings
   useEffect(() => {
@@ -129,7 +141,7 @@ const App: React.FC = () => {
             id: result.locked_package || '',
             name: result.locked_app_name || 'App',
             packageName: result.locked_package || '',
-            icon: '',
+            icon: 'DEEP_LINK', // Use a specific marker to identify deep links
             iconColor: 'bg-blue-500',
             isLocked: true,
             requiredReps: result.required_reps || 5
@@ -150,6 +162,45 @@ const App: React.FC = () => {
     });
 
     return () => { sub.then(s => s.remove()); };
+  }, []);
+
+  // Handle native Android back button
+  useEffect(() => {
+    const backButtonSub = CapacitorApp.addListener('backButton', () => {
+      const screen = currentScreenRef.current;
+
+      if (screen === ScreenName.HOME) {
+        // Double press to exit if on Home
+        setBackPressCount(prevCount => {
+          const newCount = prevCount + 1;
+          if (newCount >= 2) {
+            CapacitorApp.exitApp();
+            return 0;
+          }
+          // Reset count after 2 seconds
+          setTimeout(() => setBackPressCount(0), 2000);
+          return newCount;
+        });
+      } else if (screen === ScreenName.LOCK_CHALLENGE) {
+        const tgtApp = targetAppRef.current;
+        if (tgtApp && tgtApp.icon === 'DEEP_LINK') {
+          // If we're deep-linked over an app, cancelling should dump us back to home, not FitLock Home
+          AppLockService.exitToApp({ packageName: '' }).catch(console.warn);
+        } else {
+          setTargetApp(null);
+          setCurrentScreen(ScreenName.HOME);
+        }
+      } else if (screen === ScreenName.CAMERA_PERMISSION) {
+        // Do nothing to avoid bypassing
+      } else if (screen === ScreenName.PRIVACY_POLICY) {
+        setCurrentScreen(ScreenName.PROFILE);
+      } else {
+        // For Settings, History, Profile, etc.
+        setCurrentScreen(ScreenName.HOME);
+      }
+    });
+
+    return () => { backButtonSub.then(s => s.remove()); };
   }, []);
 
   // Initial permission check and skip onboarding if already granted
@@ -237,10 +288,10 @@ const App: React.FC = () => {
         setCurrentScreen(ScreenName.LOCK_CHALLENGE);
       }
     } else {
-      setTargetApp(app);
-      setCurrentScreen(ScreenName.APP_CONTENT);
+      // Launch the app directly via native plugin
+      AppLockService.exitToApp({ packageName: app.packageName }).catch(err => console.warn('Failed to launch app:', err));
     }
-  }, []);
+  }, [cameraGranted]);
 
   const handleUpdateApp = useCallback((appId: string, updates: Partial<AppItem>) => {
     setApps(prevApps => prevApps.map(app =>
@@ -268,15 +319,17 @@ const App: React.FC = () => {
           })
           .catch(err => console.warn('Failed to add temp unlock or exit:', err));
       }
-      return prevTarget;
+      return null;
     });
-    // We don't go to APP_CONTENT anymore, we just exit entirely via native plugin
+    // Immediately clear LockScreen so WebGL and Camera are released before going to background
+    setCurrentScreen(ScreenName.HOME);
   }, []);
 
   const handleCancelLock = useCallback(() => {
     // If we're deep-linked over an app, cancelling should dump us back to home, not FitLock Home
-    if (targetApp && !targetApp.icon) {
-      AppLockService.exitToApp({ packageName: '' });
+    // We do this by passing empty packageName to just push FitLock to the background
+    if (targetApp && targetApp.icon === 'DEEP_LINK') {
+      AppLockService.exitToApp({ packageName: '' }).catch(console.warn);
     } else {
       setTargetApp(null);
       setCurrentScreen(ScreenName.HOME);

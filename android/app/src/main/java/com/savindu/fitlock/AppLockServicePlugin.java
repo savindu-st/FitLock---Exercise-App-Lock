@@ -131,15 +131,21 @@ public class AppLockServicePlugin extends Plugin {
             if (!packageName.isEmpty()) {
                 Intent launchIntent = getContext().getPackageManager().getLaunchIntentForPackage(packageName);
                 if (launchIntent != null) {
-                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                     getContext().startActivity(launchIntent);
                 }
+            } else {
+                // No package provided means we explicitly just want to go Home
+                Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+                homeIntent.addCategory(Intent.CATEGORY_HOME);
+                homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(homeIntent);
             }
 
-            // Push FitLock to the background (simulate pressing Home)
-            if (getActivity() != null) {
-                getActivity().moveTaskToBack(true);
-            }
+            // Let the system manage the activity stack naturally.
+            // DO NOT call finish() so the WebView does not get killed, avoiding
+            // white-screen bugs on return.
+
             call.resolve();
         } catch (Exception e) {
             call.reject("Failed to exit to app: " + e.getMessage());

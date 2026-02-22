@@ -353,9 +353,24 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
     setTimeout(initMediaPipe, 500);
 
     return () => {
-      clearTimeout(timeoutId);
-      if (camera) camera.stop();
-      if (pose) pose.close();
+      try {
+        clearTimeout(timeoutId);
+        if (camera) {
+          try { camera.stop(); } catch (e) { console.warn('camera.stop() failed', e); }
+        }
+        if (pose) {
+          try { pose.close(); } catch (e) { console.warn('pose.close() failed', e); }
+        }
+        if (videoRef.current && videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach(track => {
+            try { track.stop(); } catch (e) { console.warn('track.stop() failed', e); }
+          });
+          videoRef.current.srcObject = null;
+        }
+      } catch (err) {
+        console.error('Error during LockScreen unmount:', err);
+      }
     };
   }, [app.requiredReps, onUnlock]);
 
@@ -456,7 +471,10 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
       </div>
 
       {/* Controls / Status */}
-      <div className="bg-gray-900 rounded-t-3xl -mt-6 z-20 p-6 flex flex-col items-center shadow-2xl border-t border-gray-800">
+      <div
+        className="bg-gray-900 rounded-t-3xl -mt-6 z-20 pt-6 px-6 flex flex-col items-center shadow-2xl border-t border-gray-800"
+        style={{ paddingBottom: 'calc(1.5rem + var(--nav-bar-height, 0px))' }}
+      >
         <div className="flex items-center justify-between w-full mb-4">
           <h2 className="text-xl font-bold">Unlock {app.name}</h2>
           <button

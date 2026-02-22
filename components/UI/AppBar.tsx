@@ -15,6 +15,7 @@ const AppBar: React.FC<AppBarProps> = ({ title, leading, actions }) => {
             {leading}
           </button>
         )}
+        <img src="/logo.png" alt="FitLock Logo" className="w-8 h-8 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.2)]" />
         <h1 className="text-lg font-semibold text-white tracking-wide">{title}</h1>
       </div>
       <div className="flex items-center gap-2">
