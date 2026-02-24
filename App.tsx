@@ -31,8 +31,12 @@ interface AppLockServicePlugin {
 const InstalledApps = registerPlugin<InstalledAppsPlugin>('InstalledApps');
 const AppLockService = registerPlugin<AppLockServicePlugin>('AppLockService');
 import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
+import { useSubscription } from './components/Context/SubscriptionContext';
 
 const App: React.FC = () => {
+  const { isPremium } = useSubscription();
   const [currentScreen, setCurrentScreen] = useState<ScreenName>(
     isCameraPermissionAsked() ? ScreenName.HOME : ScreenName.CAMERA_PERMISSION
   );
@@ -55,6 +59,21 @@ const App: React.FC = () => {
   useEffect(() => {
     targetAppRef.current = targetApp;
   }, [targetApp]);
+
+  useEffect(() => {
+    async function configurePurchases() {
+      await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
+
+      const platform = Capacitor.getPlatform();
+
+      if (platform === 'ios') {
+        await Purchases.configure({ apiKey: "test_txIFCPMNfrJLsYEOgIRjWuwnHkd" });
+      } else if (platform === 'android') {
+        await Purchases.configure({ apiKey: "test_txIFCPMNfrJLsYEOgIRjWuwnHkd" });
+      }
+    }
+    configurePurchases();
+  }, []);
 
   // Fetch real apps and merge with saved lock settings
   useEffect(() => {

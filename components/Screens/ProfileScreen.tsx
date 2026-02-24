@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Shield, Smartphone, LogOut, ChevronRight, Pencil, Check, X } from 'lucide-react';
 import { loadProfile, saveProfile, UserProfile } from '../../utils/storage';
 import { ScreenName } from '../../types';
+import { useSubscription } from '../Context/SubscriptionContext';
+import { RevenueCatUI, PAYWALL_RESULT } from '@revenuecat/purchases-capacitor-ui';
 
 interface ProfileScreenProps {
   onNavigate?: (screen: ScreenName) => void;
@@ -9,6 +11,7 @@ interface ProfileScreenProps {
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
   const [profile, setProfile] = useState<UserProfile>(() => loadProfile());
+  const { isPremium, refreshInfo } = useSubscription();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(profile.name);
   const [editEmail, setEditEmail] = useState(profile.email);
@@ -90,6 +93,39 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
 
       {/* Settings List */}
       <div className="mt-6 px-4 space-y-4">
+        {/* RevenueCat Integration */}
+        <div className="bg-white rounded-2xl shadow-sm border border-blue-200 overflow-hidden">
+          {isPremium ? (
+            <SettingItem
+              icon={Check}
+              label="Manage Subscription"
+              badge="Pro"
+              onClick={async () => {
+                try {
+                  await RevenueCatUI.presentCustomerCenter();
+                } catch (e) {
+                  console.error("Failed to present customer center", e);
+                }
+              }}
+            />
+          ) : (
+            <SettingItem
+              icon={Smartphone}
+              label="Go Premium"
+              onClick={async () => {
+                try {
+                  const { result } = await RevenueCatUI.presentPaywall();
+                  if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
+                    await refreshInfo(); // Refresh state after confirmed purchase or restore
+                  }
+                } catch (e) {
+                  console.error("Failed to present paywall", e);
+                }
+              }}
+            />
+          )}
+        </div>
+
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <SettingItem icon={User} label="Edit Profile" onClick={() => setIsEditing(true)} />
           <div className="h-px bg-gray-50 mx-4" />
