@@ -8,6 +8,7 @@ import ProfileScreen from './components/Screens/ProfileScreen';
 import AppLockSettingsScreen from './components/Screens/AppLockSettingsScreen';
 import HistoryScreen from './components/Screens/HistoryScreen';
 import PrivacyPolicyScreen from './components/Screens/PrivacyPolicyScreen';
+import NoticeScreen from './components/Screens/NoticeScreen';
 import CameraPermissionScreen from './components/Screens/CameraPermissionScreen';
 import PermissionsScreen from './components/Screens/PermissionsScreen';
 import { Settings, CheckCircle } from 'lucide-react';
@@ -211,7 +212,7 @@ const App: React.FC = () => {
         }
       } else if (screen === ScreenName.CAMERA_PERMISSION) {
         // Do nothing to avoid bypassing
-      } else if (screen === ScreenName.PRIVACY_POLICY) {
+      } else if (screen === ScreenName.PRIVACY_POLICY || screen === ScreenName.NOTICE) {
         setCurrentScreen(ScreenName.PROFILE);
       } else {
         // For Settings, History, Profile, etc.
@@ -432,6 +433,9 @@ const App: React.FC = () => {
       case ScreenName.PRIVACY_POLICY:
         return <PrivacyPolicyScreen onBack={() => setCurrentScreen(ScreenName.PROFILE)} />;
 
+      case ScreenName.NOTICE:
+        return <NoticeScreen onBack={() => setCurrentScreen(ScreenName.PROFILE)} />;
+
       case ScreenName.CAMERA_PERMISSION:
         return <CameraPermissionScreen onPermissionGranted={handleCameraPermissionDone} onSkip={handleCameraPermissionDone} />;
 
@@ -466,6 +470,7 @@ const App: React.FC = () => {
       case ScreenName.HISTORY: return "Workout History";
       case ScreenName.PROFILE: return "Profile";
       case ScreenName.PRIVACY_POLICY: return "Privacy Policy";
+      case ScreenName.NOTICE: return "Notice";
       case ScreenName.PERMISSIONS: return "Permissions";
       default: return "FitLock Launcher";
     }

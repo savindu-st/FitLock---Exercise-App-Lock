@@ -86,7 +86,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
         ) : (
           <>
             <h2 className="text-xl font-bold text-gray-900">{profile.name}</h2>
-            <p className="text-gray-500 text-sm">{profile.email || 'Tap the pencil to add your email'}</p>
+
           </>
         )}
       </div>
@@ -129,7 +129,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <SettingItem icon={User} label="Edit Profile" onClick={() => setIsEditing(true)} />
           <div className="h-px bg-gray-50 mx-4" />
-          <SettingItem icon={Mail} label="Notifications" badge="3" />
+          <SettingItem icon={Mail} label="Notice" onClick={() => onNavigate?.(ScreenName.NOTICE)} />
           <div className="h-px bg-gray-50 mx-4" />
           <SettingItem
             icon={Shield}
