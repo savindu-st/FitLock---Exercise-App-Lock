@@ -4,17 +4,30 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:background="#111827"
+    android:background="#0F172A"
     android:padding="32dp">
 
-    <!-- Lock Icon -->
-    <ImageView
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:src="@android:drawable/ic_lock_lock"
-        android:layout_marginBottom="24dp"
-        android:contentDescription="Locked"
-        android:background="@android:color/transparent" />
+    <!-- Spacer to push content up slightly -->
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Lock Icon Container -->
+    <FrameLayout
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:background="@drawable/bg_lock_icon"
+        android:layout_marginBottom="32dp">
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:src="@android:drawable/ic_lock_lock"
+            android:contentDescription="Locked"
+            android:tint="#60A5FA" />
+    </FrameLayout>
 
     <!-- Title -->
     <TextView
@@ -22,8 +35,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="App is Locked"
-        android:textColor="#FFFFFF"
-        android:textSize="24sp"
+        android:textColor="#F8FAFC"
+        android:textSize="28sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />
 
@@ -33,10 +46,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Complete an exercise challenge to unlock"
-        android:textColor="#9CA3AF"
-        android:textSize="14sp"
+        android:textColor="#94A3B8"
+        android:textSize="16sp"
         android:gravity="center"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="24dp" />
 
     <!-- Reps Info -->
     <TextView
@@ -44,13 +57,21 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="5 reps required"
-        android:textColor="#60A5FA"
+        android:textColor="#93C5FD"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:background="#1E3A5F"
-        android:paddingHorizontal="20dp"
-        android:paddingVertical="8dp"
-        android:layout_marginBottom="48dp" />
+        android:background="@drawable/bg_rounded_badge"
+        android:paddingLeft="24dp"
+        android:paddingRight="24dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:layout_marginBottom="0dp" />
+
+    <!-- Flexible space to push buttons to bottom -->
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1.5" />
 
     <!-- Complete Exercise Button -->
     <Button
@@ -59,21 +80,22 @@
         android:layout_height="56dp"
         android:text="Complete Exercise"
         android:textColor="#FFFFFF"
-        android:textSize="16sp"
+        android:textSize="18sp"
         android:textStyle="bold"
         android:textAllCaps="false"
-        android:backgroundTint="#2563EB"
-        android:layout_marginBottom="12dp" />
+        android:background="@drawable/bg_primary_button"
+        android:layout_marginBottom="16dp" />
 
     <!-- Go Back Button -->
     <Button
         android:id="@+id/btnGoBack"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="56dp"
         android:text="Go Back"
-        android:textColor="#9CA3AF"
-        android:textSize="14sp"
+        android:textColor="#94A3B8"
+        android:textSize="16sp"
+        android:textStyle="bold"
         android:textAllCaps="false"
-        android:backgroundTint="#1F2937" />
+        android:background="@drawable/bg_secondary_button" />
 
 </LinearLayout>
