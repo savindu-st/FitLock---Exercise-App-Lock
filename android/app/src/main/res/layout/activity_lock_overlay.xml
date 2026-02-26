@@ -96,6 +96,7 @@
         android:textSize="16sp"
         android:textStyle="bold"
         android:textAllCaps="false"
-        android:background="@drawable/bg_secondary_button" />
+        android:background="@drawable/bg_secondary_button"
+        android:layout_marginBottom="32dp" />
 
 </LinearLayout>
