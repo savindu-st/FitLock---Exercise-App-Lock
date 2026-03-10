@@ -63,7 +63,11 @@ const AppIcon: React.FC<AppIconProps> = ({ app, className = "w-full h-full objec
         return <img src={iconData} alt={app.name} className={className} />;
     }
 
-    return renderFallbackIcon();
+    return (
+        <div className={`w-full h-full flex items-center justify-center ${app.iconColor || 'bg-blue-500'}`}>
+            {renderFallbackIcon()}
+        </div>
+    );
 };
 
 export default AppIcon;

@@ -23,7 +23,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick }) => {
             onClick={() => onAppClick(app)}
             className="flex flex-col items-center group active:scale-95 transition-transform focus:outline-none"
           >
-            <div className={`relative w-[60px] h-[60px] rounded-[18px] ${app.icon ? 'bg-transparent' : app.iconColor} flex items-center justify-center mb-1.5 overflow-hidden`}>
+            <div className={`relative w-[60px] h-[60px] rounded-[18px] flex items-center justify-center mb-1.5 overflow-hidden`}>
               <AppIcon app={app} />
               {app.isLocked && (
                 <div className="absolute inset-0 bg-black/25 flex items-center justify-center backdrop-blur-[1px]">
