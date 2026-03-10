@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppItem } from '../../types';
-import { Lock, Smartphone, Facebook, Instagram, Twitter, MessageCircle, Chrome, Camera, Mail, Map } from 'lucide-react';
+import { Lock } from 'lucide-react';
+import AppIcon from '../UI/AppIcon';
 
 interface HomeScreenProps {
   apps: AppItem[];
@@ -8,21 +9,6 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick }) => {
-  // Helper to get icon based on name (simulated)
-  const getIcon = (name: string) => {
-    switch (name) {
-      case 'Facebook': return <Facebook size={32} className="text-white" />;
-      case 'Instagram': return <Instagram size={32} className="text-white" />;
-      case 'WhatsApp': return <MessageCircle size={32} className="text-white" />;
-      case 'Twitter': return <Twitter size={32} className="text-white" />;
-      case 'Chrome': return <Chrome size={32} className="text-white" />;
-      case 'Camera': return <Camera size={32} className="text-white" />;
-      case 'Gmail': return <Mail size={32} className="text-white" />;
-      case 'Maps': return <Map size={32} className="text-white" />;
-      default: return <Smartphone size={32} className="text-white" />;
-    }
-  };
-
   return (
     <div className="px-4 pt-4 pb-2">
       <div className="mb-4">
@@ -38,11 +24,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick }) => {
             className="flex flex-col items-center group active:scale-95 transition-transform focus:outline-none"
           >
             <div className={`relative w-[60px] h-[60px] rounded-[18px] ${app.icon ? 'bg-transparent' : app.iconColor} flex items-center justify-center mb-1.5 overflow-hidden`}>
-              {app.icon ? (
-                <img src={app.icon} alt={app.name} className="w-full h-full object-cover" />
-              ) : (
-                getIcon(app.name)
-              )}
+              <AppIcon app={app} />
               {app.isLocked && (
                 <div className="absolute inset-0 bg-black/25 flex items-center justify-center backdrop-blur-[1px]">
                   <Lock size={18} className="text-white drop-shadow-md" />

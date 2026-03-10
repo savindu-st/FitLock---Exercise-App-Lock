@@ -38,22 +38,8 @@ public class InstalledAppsPlugin extends Plugin {
                 appObj.put("name", pm.getApplicationLabel(appInfo).toString());
                 appObj.put("packageName", appInfo.packageName);
 
-                // Get icon as base64
-                try {
-                    Drawable icon = pm.getApplicationIcon(appInfo.packageName);
-                    Bitmap bitmap = getBitmapFromDrawable(icon);
-                    // Scale down to 144x144 to retain higher quality on HD displays
-                    Bitmap scaled = Bitmap.createScaledBitmap(bitmap, 144, 144, true);
-                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                    scaled.compress(Bitmap.CompressFormat.PNG, 100, stream);
-                    String base64 = Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP);
-                    appObj.put("icon", "data:image/png;base64," + base64);
-                    if (bitmap != scaled)
-                        bitmap.recycle();
-                    scaled.recycle();
-                } catch (Exception e) {
-                    appObj.put("icon", "");
-                }
+                // We don't fetch icon here anymore to speed up load times
+                // Icons are fetched lazily via getAppIcon()
 
                 appsArray.put(appObj);
             }
@@ -63,6 +49,40 @@ public class InstalledAppsPlugin extends Plugin {
             call.resolve(result);
         } catch (Exception e) {
             call.reject("Failed to get installed apps: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void getAppIcon(PluginCall call) {
+        String packageName = call.getString("packageName");
+        if (packageName == null) {
+            call.reject("Must provide a packageName");
+            return;
+        }
+
+        try {
+            PackageManager pm = getActivity().getPackageManager();
+            ApplicationInfo appInfo = pm.getApplicationInfo(packageName, 0);
+
+            Drawable icon = pm.getApplicationIcon(appInfo);
+            Bitmap bitmap = getBitmapFromDrawable(icon);
+            // Scale down to 144x144 to retain higher quality on HD displays
+            Bitmap scaled = Bitmap.createScaledBitmap(bitmap, 144, 144, true);
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            scaled.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            String base64 = Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP);
+            JSObject result = new JSObject();
+            result.put("icon", "data:image/png;base64," + base64);
+
+            if (bitmap != scaled)
+                bitmap.recycle();
+            scaled.recycle();
+
+            call.resolve(result);
+        } catch (Exception e) {
+            JSObject result = new JSObject();
+            result.put("icon", "");
+            call.resolve(result);
         }
     }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppItem } from '../../types';
-import { Minus, Plus, Smartphone, Facebook, Instagram, Twitter, MessageCircle, Chrome, Camera, Mail, Map, ShieldCheck, ShieldAlert, ChevronRight } from 'lucide-react';
+import { Minus, Plus, Smartphone, ShieldCheck, ShieldAlert, ChevronRight } from 'lucide-react';
+import AppIcon from '../UI/AppIcon';
 
 interface AppLockSettingsScreenProps {
   apps: AppItem[];
@@ -17,24 +18,6 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
     app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     app.packageName.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  // Helper to get icon based on name (matching HomeScreen logic)
-  const getIcon = (app: AppItem) => {
-    if (app.icon) {
-      return <img src={app.icon} alt={app.name} className="w-full h-full object-cover" />;
-    }
-    switch (app.name) {
-      case 'Facebook': return <Facebook size={20} className="text-white" />;
-      case 'Instagram': return <Instagram size={20} className="text-white" />;
-      case 'WhatsApp': return <MessageCircle size={20} className="text-white" />;
-      case 'Twitter': return <Twitter size={20} className="text-white" />;
-      case 'Chrome': return <Chrome size={20} className="text-white" />;
-      case 'Camera': return <Camera size={20} className="text-white" />;
-      case 'Gmail': return <Mail size={20} className="text-white" />;
-      case 'Maps': return <Map size={20} className="text-white" />;
-      default: return <Smartphone size={20} className="text-white" />;
-    }
-  };
 
   return (
     <div className="p-4 space-y-4 pb-4">
@@ -104,7 +87,7 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl ${app.icon ? 'bg-transparent' : app.iconColor} flex items-center justify-center text-white shadow-sm overflow-hidden`}>
-                      {getIcon(app)}
+                      <AppIcon app={app} iconSize={20} />
                     </div>
                     <div>
                       <h4 className="font-bold text-gray-800 text-sm">{app.name}</h4>

@@ -15,7 +15,8 @@ import { Settings, CheckCircle } from 'lucide-react';
 import { registerPlugin } from '@capacitor/core';
 
 interface InstalledAppsPlugin {
-  getApps(): Promise<{ apps: Array<{ name: string; packageName: string; icon: string }> }>;
+  getApps(): Promise<{ apps: Array<{ name: string; packageName: string; icon?: string }> }>;
+  getAppIcon(options: { packageName: string }): Promise<{ icon: string }>;
 }
 
 interface AppLockServicePlugin {
