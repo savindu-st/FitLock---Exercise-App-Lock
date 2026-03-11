@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { User, Mail, Shield, Smartphone, LogOut, ChevronRight, Pencil, Check, X } from 'lucide-react';
-import { loadProfile, saveProfile, UserProfile } from '../../utils/storage';
+import React, { useState } from 'react';
+import { User, Mail, Shield, Smartphone, ChevronRight, Check } from 'lucide-react';
+import { loadProfile, UserProfile } from '../../utils/storage';
 import { ScreenName } from '../../types';
 import { useSubscription } from '../Context/SubscriptionContext';
 import { RevenueCatUI, PAYWALL_RESULT } from '@revenuecat/purchases-capacitor-ui';
@@ -10,85 +10,18 @@ interface ProfileScreenProps {
 }
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
-  const [profile, setProfile] = useState<UserProfile>(() => loadProfile());
+  const [profile] = useState<UserProfile>(() => loadProfile());
   const { isPremium, refreshInfo } = useSubscription();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(profile.name);
-  const [editEmail, setEditEmail] = useState(profile.email);
-
-  const handleSave = () => {
-    const updated = { name: editName.trim() || 'User', email: editEmail.trim() };
-    setProfile(updated);
-    saveProfile(updated);
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setEditName(profile.name);
-    setEditEmail(profile.email);
-    setIsEditing(false);
-  };
 
   return (
     <div className="pb-24">
       {/* Header */}
       <div className="bg-white p-6 flex flex-col items-center border-b border-gray-100 relative">
-        {/* Edit Toggle */}
-        {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600 transition-colors"
-            aria-label="Edit profile"
-          >
-            <Pencil size={16} />
-          </button>
-        ) : (
-          <div className="absolute top-4 right-4 flex gap-2">
-            <button
-              onClick={handleCancel}
-              className="p-2 rounded-full bg-gray-100 text-gray-500 hover:bg-red-100 hover:text-red-500 transition-colors"
-              aria-label="Cancel editing"
-            >
-              <X size={16} />
-            </button>
-            <button
-              onClick={handleSave}
-              className="p-2 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
-              aria-label="Save profile"
-            >
-              <Check size={16} />
-            </button>
-          </div>
-        )}
-
         <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4 border-4 border-white shadow-lg">
           <User size={40} />
         </div>
 
-        {isEditing ? (
-          <div className="w-full max-w-xs space-y-3">
-            <input
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              placeholder="Your name"
-              className="w-full text-center text-xl font-bold text-gray-900 border-b-2 border-blue-400 bg-transparent outline-none py-1 placeholder-gray-300"
-              autoFocus
-            />
-            <input
-              type="email"
-              value={editEmail}
-              onChange={(e) => setEditEmail(e.target.value)}
-              placeholder="your.email@example.com"
-              className="w-full text-center text-sm text-gray-500 border-b-2 border-blue-400 bg-transparent outline-none py-1 placeholder-gray-300"
-            />
-          </div>
-        ) : (
-          <>
-            <h2 className="text-xl font-bold text-gray-900">{profile.name}</h2>
-
-          </>
-        )}
+        <h2 className="text-xl font-bold text-gray-900">{profile.name}</h2>
       </div>
 
       {/* Settings List */}
@@ -127,8 +60,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <SettingItem icon={User} label="Edit Profile" onClick={() => setIsEditing(true)} />
-          <div className="h-px bg-gray-50 mx-4" />
           <SettingItem icon={Mail} label="Notice" onClick={() => onNavigate?.(ScreenName.NOTICE)} />
           <div className="h-px bg-gray-50 mx-4" />
           <SettingItem
@@ -139,9 +70,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <SettingItem icon={Smartphone} label="App Settings" />
-          <div className="h-px bg-gray-50 mx-4" />
-          <SettingItem icon={LogOut} label="Log Out" danger />
+          <SettingItem icon={Smartphone} label="App Settings" onClick={() => onNavigate?.(ScreenName.PERMISSIONS)} />
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-8">

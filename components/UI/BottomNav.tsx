@@ -8,7 +8,7 @@ interface BottomNavProps {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: ScreenName.HOME, label: 'Launcher', icon: Home },
+  { id: ScreenName.HOME, label: 'Home', icon: Home },
   { id: ScreenName.SETTINGS, label: 'App Lock', icon: Shield },
   { id: ScreenName.HISTORY, label: 'History', icon: Clock },
   { id: ScreenName.PROFILE, label: 'Profile', icon: User },

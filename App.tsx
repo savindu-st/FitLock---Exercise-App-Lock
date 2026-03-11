@@ -429,7 +429,10 @@ const App: React.FC = () => {
         );
 
       case ScreenName.PROFILE:
-        return <ProfileScreen onNavigate={(screen) => setCurrentScreen(screen)} />;
+        return <ProfileScreen onNavigate={(screen) => {
+          setPreviousScreen(ScreenName.PROFILE);
+          setCurrentScreen(screen);
+        }} />;
 
       case ScreenName.PRIVACY_POLICY:
         return <PrivacyPolicyScreen onBack={() => setCurrentScreen(ScreenName.PROFILE)} />;
@@ -467,13 +470,13 @@ const App: React.FC = () => {
   // Determine title based on screen
   const getTitle = () => {
     switch (currentScreen) {
-      case ScreenName.SETTINGS: return "App Lock Config";
+      case ScreenName.SETTINGS: return "App Lock";
       case ScreenName.HISTORY: return "Workout History";
       case ScreenName.PROFILE: return "Profile";
       case ScreenName.PRIVACY_POLICY: return "Privacy Policy";
       case ScreenName.NOTICE: return "Notice";
       case ScreenName.PERMISSIONS: return "Permissions";
-      default: return "FitLock Launcher";
+      default: return "Home";
     }
   };
 
@@ -487,17 +490,6 @@ const App: React.FC = () => {
             if (screen === ScreenName.HOME) handleBackToHome();
             else setCurrentScreen(screen);
           }}
-          actions={
-            <button
-              className="p-2 text-white/90 hover:text-white transition-colors"
-              onClick={() => {
-                setPreviousScreen(currentScreen);
-                setCurrentScreen(ScreenName.PERMISSIONS);
-              }}
-            >
-              <Settings size={20} />
-            </button>
-          }
         >
           {renderContent()}
         </MobileLayout>
