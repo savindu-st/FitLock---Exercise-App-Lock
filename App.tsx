@@ -36,6 +36,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 import { useSubscription } from './components/Context/SubscriptionContext';
+import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
 
 const App: React.FC = () => {
   const { isPremium } = useSubscription();
@@ -57,6 +58,44 @@ const App: React.FC = () => {
   useEffect(() => {
     currentScreenRef.current = currentScreen;
   }, [currentScreen]);
+
+  // AdMob Banner setup
+  useEffect(() => {
+    let mounted = true;
+
+    const setupAds = async () => {
+      if (isPremium) {
+        try {
+          await AdMob.hideBanner();
+          await AdMob.removeBanner();
+        } catch (e) { }
+        return;
+      }
+
+      try {
+        await AdMob.initialize();
+        if (!mounted) return;
+        await AdMob.showBanner({
+          adId: 'ca-app-pub-3940256099942544/6300978111', // Test Banner ID
+          adSize: BannerAdSize.BANNER,
+          position: BannerAdPosition.BOTTOM_CENTER,
+          margin: 0,
+        });
+      } catch (err) {
+        console.warn('AdMob Error:', err);
+      }
+    };
+
+    setupAds();
+
+    return () => {
+      mounted = false;
+      try {
+        AdMob.hideBanner();
+        AdMob.removeBanner();
+      } catch (e) { }
+    };
+  }, [isPremium]);
 
   useEffect(() => {
     targetAppRef.current = targetApp;
