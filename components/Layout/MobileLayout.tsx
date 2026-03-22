@@ -29,7 +29,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
 
       <main
         className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth no-scrollbar"
-        style={{ paddingBottom: 'calc(var(--nav-bar-height, 0px) + 80px)' }}
+        style={{ paddingBottom: 'calc(var(--nav-bar-height, 0px) + 130px)' }}
       >
         {children}
       </main>

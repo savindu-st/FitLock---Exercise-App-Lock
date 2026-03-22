@@ -75,11 +75,19 @@ const App: React.FC = () => {
       try {
         await AdMob.initialize();
         if (!mounted) return;
+
+        // Ensure any existing banner is removed before showing a new one
+        // This ensures Native Android plugin creates it afresh with the new margin
+        try {
+          await AdMob.hideBanner();
+          await AdMob.removeBanner();
+        } catch (e) { }
+
         await AdMob.showBanner({
           adId: 'ca-app-pub-3940256099942544/6300978111', // Test Banner ID
           adSize: BannerAdSize.BANNER,
           position: BannerAdPosition.BOTTOM_CENTER,
-          margin: 0,
+          margin: 70,
         });
       } catch (err) {
         console.warn('AdMob Error:', err);

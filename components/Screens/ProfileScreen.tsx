@@ -21,7 +21,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
           <User size={40} />
         </div>
 
-        <h2 className="text-xl font-bold text-gray-900">{profile.name}</h2>
+        <h2 className="text-xl font-bold text-gray-900">User</h2>
       </div>
 
       {/* Settings List */}
