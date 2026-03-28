@@ -20,7 +20,7 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
   );
 
   return (
-    <div className="p-4 space-y-4 pb-4">
+    <div className="p-4 space-y-4 pb-4 max-w-3xl mx-auto w-full">
       {/* Camera Access Section - Only show if not granted */}
       {cameraGranted !== true && (
         <div className={`p-4 rounded-xl border ${cameraGranted === false

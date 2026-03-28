@@ -7,7 +7,7 @@ interface PrivacyPolicyScreenProps {
 
 const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ onBack }) => {
     return (
-        <div className="pb-24">
+        <div className="pb-24 max-w-3xl mx-auto w-full">
             {/* Header */}
             <div className="bg-white p-6 flex items-center gap-4 border-b border-gray-100">
                 <button

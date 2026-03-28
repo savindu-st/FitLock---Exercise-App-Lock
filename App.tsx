@@ -506,10 +506,8 @@ const App: React.FC = () => {
   // If we are in Lock Challenge, we want a Full Screen experience (no App Bar, No Bottom Nav)
   if (currentScreen === ScreenName.LOCK_CHALLENGE && targetApp) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center">
-        <div className="w-full h-[100dvh] sm:h-[800px] sm:w-[400px] sm:rounded-3xl sm:border-8 sm:border-gray-900 bg-black overflow-hidden shadow-2xl relative flex flex-col">
-          <LockScreen app={targetApp} onUnlock={handleUnlock} onCancel={handleCancelLock} />
-        </div>
+      <div className="min-h-screen w-full bg-black relative flex flex-col">
+        <LockScreen app={targetApp} onUnlock={handleUnlock} onCancel={handleCancelLock} />
       </div>
     );
   }
@@ -528,8 +526,8 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="h-full w-full flex items-center justify-center">
-      <div className="w-full h-full sm:h-[800px] sm:w-[400px] sm:rounded-3xl sm:border-8 sm:border-gray-900 bg-white overflow-hidden shadow-2xl relative flex flex-col">
+    <div className="min-h-screen w-full bg-white flex flex-col">
+      <div className="w-full min-h-screen bg-white relative flex flex-col">
         <MobileLayout
           title={getTitle()}
           currentScreen={currentScreen}

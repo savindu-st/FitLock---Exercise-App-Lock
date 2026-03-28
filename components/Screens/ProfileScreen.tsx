@@ -14,7 +14,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
   const { isPremium, refreshInfo } = useSubscription();
 
   return (
-    <div className="pb-24">
+    <div className="pb-24 max-w-3xl mx-auto w-full">
       {/* Header */}
       <div className="bg-white p-6 flex flex-col items-center border-b border-gray-100 relative">
         <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 mb-4 border-4 border-white shadow-lg">

@@ -33,7 +33,7 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ history }) => {
   const sortedHistory = [...history].sort((a, b) => b.timestamp - a.timestamp);
 
   return (
-    <div className="p-4 space-y-4 pb-24">
+    <div className="p-4 space-y-4 pb-24 max-w-3xl mx-auto w-full">
       <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center gap-4">
         <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
           <Activity size={24} />

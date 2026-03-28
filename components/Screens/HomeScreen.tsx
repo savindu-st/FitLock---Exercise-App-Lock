@@ -16,7 +16,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick }) => {
         <p className="text-gray-400 text-xs">Select an app to open</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-y-5 gap-x-4">
+      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-y-6 gap-x-4">
         {apps.map((app) => (
           <button
             key={app.id}
