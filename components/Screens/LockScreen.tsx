@@ -413,9 +413,9 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 relative text-white overflow-hidden">
+    <div className="flex flex-col flex-1 w-full h-full bg-gray-900 relative text-white overflow-hidden">
       {/* Header */}
-      <div className="absolute top-0 w-full z-20 p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
+      <div className="absolute top-0 w-full z-20 px-4 pt-10 pb-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
         <button onClick={onCancel} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
           <ArrowLeft size={24} />
         </button>

@@ -10,6 +10,7 @@ import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -27,7 +28,7 @@ import java.util.Set;
 public class AppMonitorService extends Service {
 
     private static final String TAG = "AppMonitorService";
-    private static final String CHANNEL_ID = "fitlock_monitor";
+    private static final String CHANNEL_ID = "fitlock_monitor_v3";
     private static final int NOTIFICATION_ID = 1001;
     private static final long POLL_INTERVAL_MS = 500;
     private static final String PREFS_NAME = "fitlock_native_prefs";
@@ -52,7 +53,11 @@ public class AppMonitorService extends Service {
 
         // Start as foreground service
         try {
-            startForeground(NOTIFICATION_ID, buildNotification());
+            if (Build.VERSION.SDK_INT >= 34) { // Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+                startForeground(NOTIFICATION_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification());
+            }
         } catch (Exception e) {
             Log.e(TAG, "Failed to start foreground service: " + e.getMessage());
         }
@@ -220,7 +225,7 @@ public class AppMonitorService extends Service {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
                     "FitLock Monitor",
-                    NotificationManager.IMPORTANCE_LOW);
+                    NotificationManager.IMPORTANCE_HIGH); // Changed to HIGH
             channel.setDescription("FitLock is protecting your apps");
             channel.setShowBadge(false);
             NotificationManager nm = getSystemService(NotificationManager.class);
@@ -239,10 +244,10 @@ public class AppMonitorService extends Service {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("FitLock Active")
                 .setContentText("Protecting your apps — exercise to unlock!")
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setSmallIcon(R.drawable.ic_notification_lock)
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setPriority(NotificationCompat.PRIORITY_HIGH) // Changed to HIGH
                 .build();
     }
 }
