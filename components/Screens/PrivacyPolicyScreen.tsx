@@ -19,7 +19,7 @@ const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ onBack }) => 
                 </button>
                 <div>
                     <h2 className="text-xl font-bold text-gray-900">Privacy Policy</h2>
-                    <p className="text-xs text-gray-400">Last updated: February 2026</p>
+                    <p className="text-xs text-gray-400">Last updated: March 2026</p>
                 </div>
             </div>
 
@@ -51,12 +51,12 @@ const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ onBack }) => 
                     content="All app data — including your profile information, app lock settings, and workout history — is stored locally on your device using your browser's localStorage. This data never leaves your device and is not accessible to us or any third party."
                 />
 
-                {/* No Data Collection */}
+                {/* Third-Party Services */}
                 <PolicySection
                     icon={Globe}
-                    title="No Data Collection"
+                    title="Third-Party Services"
                     color="orange"
-                    content="FitLock does not collect, transmit, or share any personal information. We do not use analytics, tracking, or advertising services. The app functions entirely offline after initial installation."
+                    content="To support ongoing development, FitLock integrates Google AdMob and RevenueCat. These services may responsibly collect non-personal device identifiers like your Advertising ID. Your core app data (exercises, app locks) is strictly offline and never sent to these services."
                 />
 
                 {/* Security */}

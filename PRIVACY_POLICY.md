@@ -1,6 +1,6 @@
 # Privacy Policy for FitLock - Exercise App Lock
 
-**Effective Date:** March 12, 2026
+**Effective Date:** March 29, 2026
 
 Thank you for choosing to be part of our community at FitLock. We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about our policy or our practices with regards to your personal information, please contact us.
 
@@ -23,8 +23,12 @@ We request certain permissions on your device to enable the core functionality o
 ### Display Over Other Apps (`android.permission.SYSTEM_ALERT_WINDOW`)
 - **Why we need it:** We use this permission to securely display the FitLock screen over any locked application you attempt to open, ensuring the app blocker functions seamlessly.
 
-### Background Services & Notifications (`android.permission.FOREGROUND_SERVICE`, `android.permission.POST_NOTIFICATIONS`)
-- **Why we need them:** To monitor the launch of locked apps reliably, FitLock runs an optimized background service. Android requires us to show a persistent notification for this service to ensure transparency that the App is running.
+### Background Services & Notifications (`android.permission.FOREGROUND_SERVICE`, `android.permission.FOREGROUND_SERVICE_SPECIAL_USE`, `android.permission.POST_NOTIFICATIONS`)
+- **Why we need them:** To monitor the launch of locked apps reliably, FitLock runs an optimized background service using specialized use cases. Android requires us to show a persistent notification for this service to ensure transparency that the App is running.
+
+### Advertising ID (`android.permission.AD_ID`)
+- **Why we need it:** We use Google AdMob to display advertisements within the App, which helps support our development. Android requires the AD_ID permission to provide relevant ads and analyze ad performance.
+- **How we handle your data:** The Advertising ID is a unique, user-resettable identifier provided by Google Play services. It is used exclusively by our advertising partners (Google AdMob) for ad serving and frequency capping. You can reset or opt out of personalized ads at any time through your Android device settings.
 
 ## 2. In-App Purchases and Subscription Data
 
@@ -36,7 +40,12 @@ FitLock uses a third-party service, **RevenueCat**, to manage premium subscripti
 
 ## 3. Data Sharing and Third-Party Services
 
-Except for RevenueCat (to process subscriptions as detailed above), **FitLock does not integrate with third-party analytics, advertising, or crash reporting SDKs that track user behavior.** We do not sell, rent, or trade any user information to third parties.
+FitLock uses the following third-party services:
+
+- **RevenueCat:** To process and manage premium subscriptions and in-app purchases, as detailed above.
+- **Google AdMob:** To serve advertisements within the App. AdMob may collect and process information such as your Advertising ID, device information, and ad interactions to provide relevant advertising. Please refer to the [Google Privacy Policy](https://policies.google.com/privacy) for more details.
+
+Except for the services listed above, **FitLock does not integrate with third-party analytics or crash reporting SDKs.** We do not sell, rent, or trade any personal user information to third parties.
 
 ## 4. Security of Your Information
 

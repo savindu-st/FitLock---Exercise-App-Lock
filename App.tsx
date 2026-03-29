@@ -116,9 +116,9 @@ const App: React.FC = () => {
       const platform = Capacitor.getPlatform();
 
       if (platform === 'ios') {
-        await Purchases.configure({ apiKey: "test_txIFCPMNfrJLsYEOgIRjWuwnHkd" });
+        await Purchases.configure({ apiKey: "test_txIFCPMNfrJLsYEOgIRjWuwnHkd" }); // Update this if you ever publish to iOS
       } else if (platform === 'android') {
-        await Purchases.configure({ apiKey: "test_txIFCPMNfrJLsYEOgIRjWuwnHkd" });
+        await Purchases.configure({ apiKey: "goog_ewdbcRWIBBzkAKtkkRvNSkpZFVZ" });
       }
     }
     configurePurchases();
