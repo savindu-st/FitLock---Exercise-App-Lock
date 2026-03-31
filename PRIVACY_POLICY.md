@@ -57,4 +57,5 @@ We may update our Privacy Policy from time to time. The updated version will be 
 
 ## 6. Contact Us
 
-If you have questions or comments about this policy, or if you wish to exercise any of your rights regarding your data, please contact us at [Insert Support Email/Contact Form Link].
+If you have questions or comments about this policy, or if you wish to exercise any of your rights regarding your data, please contact us at fitlock999@gmail.com.
+
