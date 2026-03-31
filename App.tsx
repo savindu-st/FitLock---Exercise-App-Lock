@@ -19,6 +19,12 @@ interface InstalledAppsPlugin {
   getAppIcon(options: { packageName: string }): Promise<{ icon: string }>;
 }
 
+interface PermissionsPluginInterface {
+    checkOverlayPermission(): Promise<{ granted: boolean }>;
+    checkUsageAccessPermission(): Promise<{ granted: boolean }>;
+    checkCameraPermission(): Promise<{ granted: boolean }>;
+}
+
 interface AppLockServicePlugin {
   startService(): Promise<void>;
   stopService(): Promise<void>;
@@ -32,6 +38,7 @@ interface AppLockServicePlugin {
 
 const InstalledApps = registerPlugin<InstalledAppsPlugin>('InstalledApps');
 const AppLockService = registerPlugin<AppLockServicePlugin>('AppLockService');
+const PermissionsNative = registerPlugin<PermissionsPluginInterface>('PermissionsPlugin');
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
@@ -48,6 +55,7 @@ const App: React.FC = () => {
   const [pendingLockApp, setPendingLockApp] = useState<AppItem | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>(() => loadHistory());
   const [cameraGranted, setCameraGranted] = useState<boolean | null>(null);
+  const [allPermissionsGranted, setAllPermissionsGranted] = useState<boolean | null>(null);
   const [isLoadingApps, setIsLoadingApps] = useState(true);
   const [previousScreen, setPreviousScreen] = useState<ScreenName>(ScreenName.HOME);
   const [backPressCount, setBackPressCount] = useState(0);
@@ -58,6 +66,39 @@ const App: React.FC = () => {
   useEffect(() => {
     currentScreenRef.current = currentScreen;
   }, [currentScreen]);
+
+  // Monitor native permission statuses globally
+  useEffect(() => {
+    const checkPermissions = async () => {
+      try {
+        const [overlay, usage, camera] = await Promise.all([
+          PermissionsNative.checkOverlayPermission(),
+          PermissionsNative.checkUsageAccessPermission(),
+          PermissionsNative.checkCameraPermission()
+        ]);
+        setAllPermissionsGranted(overlay.granted && usage.granted && camera.granted);
+      } catch (err) {
+        console.warn('Failed to check native permissions:', err);
+      }
+    };
+    checkPermissions();
+
+    const sub = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) checkPermissions();
+    });
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkPermissions();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => { 
+      sub.then(s => s.remove()); 
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
 
   // AdMob Banner setup
   useEffect(() => {
@@ -438,7 +479,15 @@ const App: React.FC = () => {
             </div>
           );
         }
-        return <HomeScreen apps={apps} onAppClick={handleAppClick} />;
+        return <HomeScreen 
+          apps={apps} 
+          onAppClick={handleAppClick} 
+          allPermissionsGranted={allPermissionsGranted}
+          onRequirePermissions={() => {
+            setPreviousScreen(ScreenName.HOME);
+            setCurrentScreen(ScreenName.PERMISSIONS);
+          }}
+        />;
 
       case ScreenName.SETTINGS:
         if (isLoadingApps) {
@@ -449,7 +498,15 @@ const App: React.FC = () => {
             </div>
           );
         }
-        return <AppLockSettingsScreen apps={apps} onUpdateApp={handleUpdateApp} onRequestCamera={handleRequestCameraFromSettings} cameraGranted={cameraGranted} />;
+        return <AppLockSettingsScreen 
+          apps={apps} 
+          onUpdateApp={handleUpdateApp} 
+          allPermissionsGranted={allPermissionsGranted}
+          onRequirePermissions={() => {
+            setPreviousScreen(ScreenName.SETTINGS);
+            setCurrentScreen(ScreenName.PERMISSIONS);
+          }} 
+        />;
 
       case ScreenName.HISTORY:
         return <HistoryScreen history={history} />;
@@ -494,7 +551,15 @@ const App: React.FC = () => {
         return <PermissionsScreen onBack={() => setCurrentScreen(previousScreen)} />;
 
       default:
-        return <HomeScreen apps={apps} onAppClick={handleAppClick} />;
+        return <HomeScreen 
+          apps={apps} 
+          onAppClick={handleAppClick} 
+          allPermissionsGranted={allPermissionsGranted}
+          onRequirePermissions={() => {
+            setPreviousScreen(ScreenName.HOME);
+            setCurrentScreen(ScreenName.PERMISSIONS);
+          }}
+        />;
     }
   };
 

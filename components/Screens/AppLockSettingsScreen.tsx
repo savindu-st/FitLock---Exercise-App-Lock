@@ -3,14 +3,24 @@ import { AppItem } from '../../types';
 import { Minus, Plus, Smartphone, ShieldCheck, ShieldAlert, ChevronRight } from 'lucide-react';
 import AppIcon from '../UI/AppIcon';
 
+import { registerPlugin } from '@capacitor/core';
+
+interface PermissionsPluginInterface {
+    checkOverlayPermission(): Promise<{ granted: boolean }>;
+    checkUsageAccessPermission(): Promise<{ granted: boolean }>;
+    checkCameraPermission(): Promise<{ granted: boolean }>;
+}
+
+const PermissionsNative = registerPlugin<PermissionsPluginInterface>('PermissionsPlugin');
+
 interface AppLockSettingsScreenProps {
   apps: AppItem[];
   onUpdateApp: (appId: string, updates: Partial<AppItem>) => void;
-  onRequestCamera: () => void;
-  cameraGranted: boolean | null;
+  onRequirePermissions: () => void;
+  allPermissionsGranted?: boolean | null;
 }
 
-const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onUpdateApp, onRequestCamera, cameraGranted }) => {
+const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onUpdateApp, onRequirePermissions, allPermissionsGranted }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter apps based on search query
@@ -21,35 +31,27 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
 
   return (
     <div className="p-4 space-y-4 pb-4 max-w-3xl mx-auto w-full">
-      {/* Camera Access Section - Only show if not granted */}
-      {cameraGranted !== true && (
-        <div className={`p-4 rounded-xl border ${cameraGranted === false
-          ? 'bg-amber-50 border-amber-100'
-          : 'bg-gray-50 border-gray-100'
-          }`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-100">
-                <ShieldAlert size={20} className="text-amber-600" />
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-800 text-sm">Camera Access</h4>
-                <p className="text-xs text-amber-600">
-                  {cameraGranted === null ? 'Checking...' : 'Not granted'}
-                </p>
-              </div>
+
+      {allPermissionsGranted === false && (
+        <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 shadow-sm flex flex-col items-start gap-2">
+          <div className="flex items-start gap-3 w-full">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-amber-100 shrink-0">
+              <ShieldAlert size={20} className="text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-gray-800 text-sm">Action Required</h4>
+              <p className="text-xs text-amber-700/80 mt-0.5 leading-relaxed">
+                App locking is paused until required permissions are granted.
+              </p>
             </div>
             <button
-              onClick={onRequestCamera}
-              className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-500 active:scale-95 transition-all"
+              onClick={onRequirePermissions}
+              className="flex items-center gap-1 px-3 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 active:scale-95 transition-all mt-1"
             >
-              <span>Grant</span>
+              <span>Review</span>
               <ChevronRight size={14} />
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Camera is required for exercise detection to unlock protected apps.
-          </p>
         </div>
       )}
 
@@ -96,7 +98,27 @@ const AppLockSettingsScreen: React.FC<AppLockSettingsScreenProps> = ({ apps, onU
                   </div>
 
                   <button
-                    onClick={() => onUpdateApp(app.id, { isLocked: !app.isLocked })}
+                    onClick={async () => {
+                      if (!app.isLocked) {
+                        try {
+                          const [overlay, usage, camera] = await Promise.all([
+                            PermissionsNative.checkOverlayPermission(),
+                            PermissionsNative.checkUsageAccessPermission(),
+                            PermissionsNative.checkCameraPermission()
+                          ]);
+                          
+                          if (!overlay.granted || !usage.granted || !camera.granted) {
+                            onRequirePermissions();
+                            return;
+                          }
+                        } catch (err) {
+                          console.warn("Failed to check permissions", err);
+                          onRequirePermissions();
+                          return;
+                        }
+                      }
+                      onUpdateApp(app.id, { isLocked: !app.isLocked });
+                    }}
                     className={`w-12 h-7 rounded-full transition-colors relative ${app.isLocked ? 'bg-blue-600' : 'bg-gray-200'}`}
                   >
                     <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${app.isLocked ? 'translate-x-5' : ''}`} />

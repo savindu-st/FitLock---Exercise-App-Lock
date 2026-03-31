@@ -6,9 +6,11 @@ import AppIcon from '../UI/AppIcon';
 interface HomeScreenProps {
   apps: AppItem[];
   onAppClick: (app: AppItem) => void;
+  allPermissionsGranted?: boolean | null;
+  onRequirePermissions?: () => void;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick, allPermissionsGranted, onRequirePermissions }) => {
   return (
     <div className="px-4 pt-4 pb-2">
       <div className="mb-4">
@@ -36,12 +38,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick }) => {
         ))}
       </div>
 
-      <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border border-blue-100/60">
-        <h3 className="font-bold text-blue-700 text-sm mb-0.5">FitLock Active</h3>
-        <p className="text-xs text-blue-500/80">
-          Protected apps require exercise to unlock.
-        </p>
-      </div>
+      {allPermissionsGranted === false ? (
+        <div className="mt-8 bg-amber-50 p-4 rounded-2xl border border-amber-200 shadow-sm flex flex-col items-start gap-2">
+          <div>
+            <h3 className="font-bold text-amber-800 text-sm mb-0.5">Permissions Missing</h3>
+            <p className="text-xs text-amber-700/80 leading-relaxed">
+              FitLock needs certain permissions to lock apps and detect exercises.
+            </p>
+          </div>
+          <button 
+            onClick={onRequirePermissions}
+            className="mt-1 px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold active:bg-amber-700 transition-colors w-full"
+          >
+            Grant Permissions
+          </button>
+        </div>
+      ) : (
+        <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-2xl border border-blue-100/60 shadow-sm">
+          <h3 className="font-bold text-blue-800 text-sm mb-0.5">FitLock Active</h3>
+          <p className="text-xs text-blue-600/80">
+            Protected apps require exercise to unlock.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
