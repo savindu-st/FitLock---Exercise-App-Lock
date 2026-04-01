@@ -38,7 +38,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <SettingItem icon={Smartphone} label="App Settings" onClick={() => onNavigate?.(ScreenName.PERMISSIONS)} />
+          <SettingItem icon={Smartphone} label="Permissions" onClick={() => onNavigate?.(ScreenName.PERMISSIONS)} />
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-8">
