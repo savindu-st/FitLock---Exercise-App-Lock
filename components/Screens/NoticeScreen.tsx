@@ -36,18 +36,7 @@ const NoticeScreen: React.FC<NoticeScreenProps> = ({ onBack }) => {
                     </p>
                 </div>
 
-                {/* Subscription Notice */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
-                            <Smartphone size={18} />
-                        </div>
-                        <h3 className="font-bold text-gray-800">Premium Subscription</h3>
-                    </div>
-                    <p className="text-sm text-gray-600 leading-relaxed pl-11">
-                        If you get premium subscription on this device you can't use that subscription on another device because the the premium subscription gives to the device id by play store.
-                    </p>
-                </div>
+
             </div>
         </div>
     );

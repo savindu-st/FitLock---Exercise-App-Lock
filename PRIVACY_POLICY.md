@@ -30,32 +30,23 @@ We request certain permissions on your device to enable the core functionality o
 - **Why we need it:** We use Google AdMob to display advertisements within the App, which helps support our development. Android requires the AD_ID permission to provide relevant ads and analyze ad performance.
 - **How we handle your data:** The Advertising ID is a unique, user-resettable identifier provided by Google Play services. It is used exclusively by our advertising partners (Google AdMob) for ad serving and frequency capping. You can reset or opt out of personalized ads at any time through your Android device settings.
 
-## 2. In-App Purchases and Subscription Data
-
-FitLock uses a third-party service, **RevenueCat**, to manage premium subscriptions and in-app purchases.
-
-- **Information processed by RevenueCat:** When you make a purchase, RevenueCat processes an anonymous App User ID linked to your device, purchase history, and receipt data from the Google Play Store. This is strictly required to validate your subscription, restore purchases, and ensure premium features are unlocked.
-- **Device Specificity:** Premium subscriptions are tied to the device ID obtained from the Google Play Store and are device-specific.
-- Please refer to the [RevenueCat Privacy Policy](https://www.revenuecat.com/privacy) for more details on how they handle information related to purchases.
-
-## 3. Data Sharing and Third-Party Services
+## 2. Data Sharing and Third-Party Services
 
 FitLock uses the following third-party services:
 
-- **RevenueCat:** To process and manage premium subscriptions and in-app purchases, as detailed above.
 - **Google AdMob:** To serve advertisements within the App. AdMob may collect and process information such as your Advertising ID, device information, and ad interactions to provide relevant advertising. Please refer to the [Google Privacy Policy](https://policies.google.com/privacy) for more details.
 
 Except for the services listed above, **FitLock does not integrate with third-party analytics or crash reporting SDKs.** We do not sell, rent, or trade any personal user information to third parties.
 
-## 4. Security of Your Information
+## 3. Security of Your Information
 
-Because nearly all processing is handled locally on your device, the risk of data compromise in transit is virtually eliminated. For the subscription checking process (handled by RevenueCat), communication is encrypted over secure HTTPS connections.
+Because nearly all processing is handled locally on your device, the risk of data compromise in transit is virtually eliminated.
 
-## 5. Changes to This Privacy Policy
+## 4. Changes to This Privacy Policy
 
 We may update our Privacy Policy from time to time. The updated version will be indicated by an updated "Effective Date" at the top of this document. We encourage you to review this privacy policy frequently to be informed of how we are protecting your information.
 
-## 6. Contact Us
+## 5. Contact Us
 
 If you have questions or comments about this policy, or if you wish to exercise any of your rights regarding your data, please contact us at fitlock999@gmail.com.
 
