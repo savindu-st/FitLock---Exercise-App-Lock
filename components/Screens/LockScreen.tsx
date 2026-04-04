@@ -271,15 +271,10 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
       }
     };
 
+    let pollInterval: NodeJS.Timeout;
+
     const initMediaPipe = async () => {
       try {
-        console.log('[FitLock] Step 1: Checking MediaPipe globals...');
-
-        if (!window.Pose) {
-          setCameraError('Exercise AI failed to load. Please restart the app.');
-          return;
-        }
-
         console.log('[FitLock] Step 2: Creating Pose instance...');
         pose = new window.Pose({
           locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
@@ -384,20 +379,33 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
       }
     };
 
-    // Timeout: if still loading after 15s, show error
+    // Timeout: if still loading overall after 20s, show error
     const timeoutId = setTimeout(() => {
       if (loading) {
         console.error('[FitLock] TIMEOUT: Camera init took too long');
         setCameraError('Camera initialization timed out. Please go back and try again.');
       }
-    }, 15000);
+    }, 20000);
 
-    // Small delay to ensure scripts loaded
-    setTimeout(initMediaPipe, 500);
+    // Poll for the CDN script instead of a rigid delay
+    let attempts = 0;
+    pollInterval = setInterval(() => {
+      if (window.Pose) {
+        clearInterval(pollInterval);
+        initMediaPipe();
+      } else {
+        attempts++;
+        if (attempts >= 30) { // 30 * 500 = 15s to download script
+          clearInterval(pollInterval);
+          setCameraError('Exercise AI download took too long. Please check your internet connection and try again.');
+        }
+      }
+    }, 500);
 
     return () => {
       try {
         clearTimeout(timeoutId);
+        clearInterval(pollInterval);
         if (camera) {
           try { camera.stop(); } catch (e) { console.warn('camera.stop() failed', e); }
         }

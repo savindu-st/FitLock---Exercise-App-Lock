@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Layers, BarChart3, Camera, Bell, CheckCircle2, XCircle, ExternalLink, ShieldCheck } from 'lucide-react';
 import { registerPlugin } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 // ── Native Plugin Interface ────────────────────────────────────────
 
@@ -148,7 +149,18 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
             }
         };
         document.addEventListener('visibilitychange', handleVisibility);
-        return () => document.removeEventListener('visibilitychange', handleVisibility);
+
+        // Listen for Capacitor App state changes (when returning from background/settings)
+        const appStateListener = App.addListener('appStateChange', ({ isActive }) => {
+            if (isActive) {
+                refreshPermissions();
+            }
+        });
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility);
+            appStateListener.then(listener => listener.remove()).catch(() => {});
+        };
     }, [refreshPermissions]);
 
     const handleGrant = async (perm: PermissionItem) => {
