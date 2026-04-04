@@ -457,14 +457,14 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
   };
 
   return (
-    <div className="flex flex-col flex-1 w-full h-full bg-gray-900 relative text-white overflow-hidden">
+    <div className="flex flex-col landscape:flex-row-reverse flex-1 w-full h-full bg-gray-900 relative text-white overflow-hidden">
       {/* Header */}
-      <div className="absolute top-0 w-full z-20 px-4 pt-10 pb-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
-        <button onClick={onCancel} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
+      <div className="absolute top-0 w-full z-30 px-4 pt-10 pb-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent landscape:from-transparent landscape:bg-none pointer-events-none">
+        <button onClick={onCancel} className="p-2 rounded-full bg-white/10 hover:bg-white/20 pointer-events-auto backdrop-blur-sm">
           <ArrowLeft size={24} />
         </button>
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-sm bg-red-600 px-3 py-1 rounded-full uppercase tracking-wider">Locked</span>
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <span className="font-bold text-sm bg-red-600 px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">Locked</span>
         </div>
       </div>
 
@@ -523,10 +523,10 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
 
       {/* Controls / Status */}
       <div
-        className="bg-gray-900 rounded-t-3xl -mt-6 z-20 pt-6 px-6 flex flex-col items-center shadow-2xl border-t border-gray-800"
+        className="bg-gray-900 rounded-t-3xl -mt-6 landscape:rounded-t-none landscape:rounded-r-3xl landscape:-mt-0 landscape:-mr-6 z-20 pt-6 px-6 landscape:pt-16 flex flex-col items-center landscape:justify-center landscape:w-[45%] landscape:max-w-md shadow-2xl border-t landscape:border-t-0 landscape:border-r border-gray-800"
         style={{ paddingBottom: 'calc(1.5rem + var(--nav-bar-height, 0px))' }}
       >
-        <div className="flex items-center justify-between w-full mb-4">
+        <div className="flex items-center justify-between w-full mb-4 landscape:mb-8">
           <h2 className="text-xl font-bold">Unlock {app.name}</h2>
           <button
             onClick={() => setShowInfo(true)}
