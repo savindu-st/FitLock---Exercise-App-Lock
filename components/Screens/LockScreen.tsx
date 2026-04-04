@@ -22,7 +22,7 @@ const EXERCISE_GUIDES = {
   [ExerciseType.PUSHUPS]: {
     title: "How to do Pushups",
     steps: [
-      "Ensure your upper body (shoulders, elbows, wrists) is fully visible.",
+      "Ensure your full body (head to toe) is visible.",
       "Start in a high plank position with arms straight (UP state).",
       "Lower your body until your elbows are bent significantly (< 90°).",
       "Push back up to the starting position to count 1 rep."
@@ -32,7 +32,7 @@ const EXERCISE_GUIDES = {
   [ExerciseType.SQUATS]: {
     title: "How to do Squats",
     steps: [
-      "Ensure your full body (specifically hips, knees, ankles) is visible.",
+      "Ensure your full body (head to toe) is visible.",
       "Stand straight with feet shoulder-width apart (UP state).",
       "Lower your hips as if sitting in a chair until knees are bent (< 100°).",
       "Stand back up to the starting position to count 1 rep."
@@ -106,52 +106,94 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
         const landmarks = results.poseLandmarks;
         const currentType = exerciseRef.current;
 
-        // --- EXERCISE LOGIC ---
+        // --- FULL BODY VISIBILITY CHECK ---
+        const nose = landmarks[0];
+        const leftShoulder = landmarks[11];
+        const rightShoulder = landmarks[12];
+        const leftElbow = landmarks[13];
+        const rightElbow = landmarks[14];
+        const leftWrist = landmarks[15];
+        const rightWrist = landmarks[16];
+        const leftHip = landmarks[23];
+        const rightHip = landmarks[24];
+        const leftKnee = landmarks[25];
+        const rightKnee = landmarks[26];
+        const leftAnkle = landmarks[27];
+        const rightAnkle = landmarks[28];
 
-        if (currentType === ExerciseType.PUSHUPS) {
-          // Pushups Logic
-          // Left side: 11 (shoulder), 13 (elbow), 15 (wrist)
-          const leftShoulder = landmarks[11];
-          const leftElbow = landmarks[13];
-          const leftWrist = landmarks[15];
+        const isHeadVisible = nose.visibility > 0.5;
+        const isLeftArmVisible = leftShoulder.visibility > 0.5 && leftElbow.visibility > 0.5 && leftWrist.visibility > 0.5;
+        const isRightArmVisible = rightShoulder.visibility > 0.5 && rightElbow.visibility > 0.5 && rightWrist.visibility > 0.5;
+        const isLeftLegVisible = leftHip.visibility > 0.5 && leftKnee.visibility > 0.5 && leftAnkle.visibility > 0.5;
+        const isRightLegVisible = rightHip.visibility > 0.5 && rightKnee.visibility > 0.5 && rightAnkle.visibility > 0.5;
 
-          if (leftShoulder.visibility > 0.5 && leftElbow.visibility > 0.5 && leftWrist.visibility > 0.5) {
-            const angle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+        // Enforce full body visibility before we start counting
+        const isFullBodyVisible = isHeadVisible && 
+                                 (isLeftArmVisible || isRightArmVisible) && 
+                                 (isLeftLegVisible || isRightLegVisible);
 
-            if (angle > 140) { // UP
-              if (stateRef.current === ExerciseState.DOWN) {
-                countRef.current += 1;
-                setReps(countRef.current);
-                stateRef.current = ExerciseState.UP;
-                setFeedback("Good! Down again.");
-              } else if (stateRef.current !== ExerciseState.COMPLETED) {
-                stateRef.current = ExerciseState.UP;
-                setFeedback("Start going down");
+        if (!isFullBodyVisible) {
+          if (stateRef.current !== ExerciseState.COMPLETED) {
+            setFeedback("Please make sure your full body is visible");
+          }
+        } else {
+          // --- EXERCISE LOGIC ---
+
+          if (currentType === ExerciseType.PUSHUPS) {
+            // Find the most visible side to support both left and right-facing users
+            const leftArmVis = (leftShoulder.visibility + leftElbow.visibility + leftWrist.visibility) / 3;
+            const rightArmVis = (rightShoulder.visibility + rightElbow.visibility + rightWrist.visibility) / 3;
+            
+            const useLeft = leftArmVis > rightArmVis;
+            const shoulder = useLeft ? leftShoulder : rightShoulder;
+            const elbow = useLeft ? leftElbow : rightElbow;
+            const wrist = useLeft ? leftWrist : rightWrist;
+            const hip = useLeft ? leftHip : rightHip;
+            const ankle = useLeft ? leftAnkle : rightAnkle;
+
+            const armAngle = calculateAngle(shoulder, elbow, wrist);
+            const bodyAngle = calculateAngle(shoulder, hip, ankle);
+
+            // Enforce straight back (plank form)
+            if (bodyAngle < 130) {
+              if (stateRef.current !== ExerciseState.COMPLETED) {
+                setFeedback("Keep your back straight!");
               }
-            } else if (angle < 100) { // DOWN
-              if (stateRef.current === ExerciseState.UP) {
-                stateRef.current = ExerciseState.DOWN;
-                setFeedback("Push UP!");
+            } else {
+              if (armAngle > 150) { // UP
+                if (stateRef.current === ExerciseState.DOWN) {
+                  countRef.current += 1;
+                  setReps(countRef.current);
+                  stateRef.current = ExerciseState.UP;
+                  setFeedback("Good! Down again.");
+                } else if (stateRef.current !== ExerciseState.COMPLETED) {
+                  stateRef.current = ExerciseState.UP;
+                  setFeedback("Start going down");
+                }
+              } else if (armAngle < 90) { // DOWN
+                if (stateRef.current === ExerciseState.UP) {
+                  stateRef.current = ExerciseState.DOWN;
+                  setFeedback("Push UP!");
+                }
               }
             }
-          } else {
-            setFeedback("Make sure your arm is visible");
-          }
 
-        } else if (currentType === ExerciseType.SQUATS) {
-          // Squats Logic
-          // Left side: 23 (hip), 25 (knee), 27 (ankle)
-          const leftHip = landmarks[23];
-          const leftKnee = landmarks[25];
-          const leftAnkle = landmarks[27];
+          } else if (currentType === ExerciseType.SQUATS) {
+            // Choose the more visible leg
+            const leftLegVis = (leftHip.visibility + leftKnee.visibility + leftAnkle.visibility) / 3;
+            const rightLegVis = (rightHip.visibility + rightKnee.visibility + rightAnkle.visibility) / 3;
 
-          if (leftHip.visibility > 0.5 && leftKnee.visibility > 0.5 && leftAnkle.visibility > 0.5) {
-            const angle = calculateAngle(leftHip, leftKnee, leftAnkle);
+            const useLeft = leftLegVis > rightLegVis;
+            const hip = useLeft ? leftHip : rightHip;
+            const knee = useLeft ? leftKnee : rightKnee;
+            const ankle = useLeft ? leftAnkle : rightAnkle;
 
-            // Standing (UP) ~ 170-180
+            const legAngle = calculateAngle(hip, knee, ankle);
+
+            // Standing (UP) ~ 150-180
             // Squat (DOWN) < 100
 
-            if (angle > 140) { // STANDING
+            if (legAngle > 150) { // STANDING
               if (stateRef.current === ExerciseState.DOWN) {
                 countRef.current += 1;
                 setReps(countRef.current);
@@ -161,59 +203,53 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
                 stateRef.current = ExerciseState.UP;
                 setFeedback("Squat down");
               }
-            } else if (angle < 110) { // SQUATTING
+            } else if (legAngle < 100) { // SQUATTING
               if (stateRef.current === ExerciseState.UP) {
                 stateRef.current = ExerciseState.DOWN;
                 setFeedback("Stand UP!");
               }
             }
-          } else {
-            setFeedback("Make sure your legs are visible");
-          }
 
-        } else if (currentType === ExerciseType.JUMPING_JACKS) {
-          // Jumping Jacks Logic
-          // We need wrists to go above the head, and then back down below hips.
-          const nose = landmarks[0];
-          const leftShoulder = landmarks[11];
-          const rightShoulder = landmarks[12];
-          const leftHip = landmarks[23];
-          const rightHip = landmarks[24];
-          const leftWrist = landmarks[15];
-          const rightWrist = landmarks[16];
+          } else if (currentType === ExerciseType.JUMPING_JACKS) {
+            // Both arms and legs should be visible
+            if (isLeftArmVisible && isRightArmVisible && isLeftLegVisible && isRightLegVisible) {
+              const headY = nose.y;
 
-          const isVisible = [leftShoulder, rightShoulder, leftHip, rightHip, leftWrist, rightWrist].every(l => l.visibility > 0.5);
+              // Hands UP: Wrists go above the head
+              const handsUp = leftWrist.y < headY && rightWrist.y < headY;
+              
+              // Hands DOWN: Wrists go down past the hips
+              const handsDown = leftWrist.y > leftHip.y && rightWrist.y > rightHip.y;
+              
+              // Feet wide vs together logic
+              const ankleDist = Math.abs(leftAnkle.x - rightAnkle.x);
+              const shoulderDist = Math.abs(leftShoulder.x - rightShoulder.x);
+              const ratio = shoulderDist > 0.01 ? ankleDist / shoulderDist : 1;
+              const feetWide = ratio > 1.2;
+              const feetTogether = ratio <= 1.2;
 
-          if (isVisible) {
-            // Determine a "head" or "top" threshold (y increases downwards)
-            const headY = (nose && nose.visibility > 0.5)
-              ? nose.y
-              : Math.min(leftShoulder.y, rightShoulder.y) - 0.15;
-
-            // Hands UP: Wrists go above the head
-            const handsUp = leftWrist.y < headY && rightWrist.y < headY;
-
-            // Hands DOWN: Wrists go down past the hips
-            const handsDown = leftWrist.y > leftHip.y && rightWrist.y > rightHip.y;
-
-            if (handsDown) { // DOWN (Start/End position)
-              if (stateRef.current === ExerciseState.UP) {
-                countRef.current += 1;
-                setReps(countRef.current);
-                stateRef.current = ExerciseState.DOWN;
-                setFeedback("Good! Jump up.");
-              } else if (stateRef.current !== ExerciseState.COMPLETED) {
-                stateRef.current = ExerciseState.DOWN;
-                setFeedback("Jump!");
+              // Enforce full body jumping jack form
+              if (handsDown && feetTogether) { // DOWN (Start/End position)
+                if (stateRef.current === ExerciseState.UP) {
+                  countRef.current += 1;
+                  setReps(countRef.current);
+                  stateRef.current = ExerciseState.DOWN;
+                  setFeedback("Good! Jump up.");
+                } else if (stateRef.current !== ExerciseState.COMPLETED) {
+                  stateRef.current = ExerciseState.DOWN;
+                  setFeedback("Jump!");
+                }
+              } else if (handsUp && feetWide) { // UP (Star position)
+                if (stateRef.current === ExerciseState.DOWN || stateRef.current === ExerciseState.IDLE) {
+                  stateRef.current = ExerciseState.UP;
+                  setFeedback("Back down!");
+                }
               }
-            } else if (handsUp) { // UP (Star position)
-              if (stateRef.current === ExerciseState.DOWN || stateRef.current === ExerciseState.IDLE) {
-                stateRef.current = ExerciseState.UP;
-                setFeedback("Back down!");
+            } else {
+              if (stateRef.current !== ExerciseState.COMPLETED) {
+                setFeedback("Make sure both arms and legs are visible");
               }
             }
-          } else {
-            setFeedback("Upper body & hips must be visible");
           }
         }
       }
