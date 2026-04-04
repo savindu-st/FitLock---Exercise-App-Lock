@@ -101,6 +101,10 @@ const App: React.FC = () => {
   }, []);
 
   // AdMob Banner setup
+  const isFullScreen = currentScreen === ScreenName.LOCK_CHALLENGE || 
+                       currentScreen === ScreenName.CAMERA_PERMISSION || 
+                       currentScreen === ScreenName.APP_CONTENT;
+
   useEffect(() => {
     let mounted = true;
 
@@ -124,11 +128,13 @@ const App: React.FC = () => {
           await AdMob.removeBanner();
         } catch (e) { }
 
+        if (!mounted) return;
+
         await AdMob.showBanner({
           adId: 'ca-app-pub-3940256099942544/6300978111', // Test Banner ID
           adSize: BannerAdSize.BANNER,
           position: BannerAdPosition.BOTTOM_CENTER,
-          margin: 70,
+          margin: isFullScreen ? 0 : 70,
         });
       } catch (err) {
         console.warn('AdMob Error:', err);
@@ -139,12 +145,8 @@ const App: React.FC = () => {
 
     return () => {
       mounted = false;
-      try {
-        AdMob.hideBanner();
-        AdMob.removeBanner();
-      } catch (e) { }
     };
-  }, [isPremium]);
+  }, [isPremium, isFullScreen]);
 
   useEffect(() => {
     targetAppRef.current = targetApp;

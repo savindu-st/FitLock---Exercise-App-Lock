@@ -524,7 +524,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
       {/* Controls / Status */}
       <div
         className="bg-gray-900 rounded-t-3xl -mt-6 landscape:rounded-t-none landscape:rounded-r-3xl landscape:-mt-0 landscape:-mr-6 z-20 pt-6 px-6 landscape:pt-16 flex flex-col items-center landscape:justify-center landscape:w-[45%] landscape:max-w-md shadow-2xl border-t landscape:border-t-0 landscape:border-r border-gray-800"
-        style={{ paddingBottom: 'calc(1.5rem + var(--nav-bar-height, 0px))' }}
+        style={{ paddingBottom: 'calc(5rem + var(--nav-bar-height, 0px))' }}
       >
         <div className="flex items-center justify-between w-full mb-4 landscape:mb-8">
           <h2 className="text-xl font-bold">Unlock {app.name}</h2>
