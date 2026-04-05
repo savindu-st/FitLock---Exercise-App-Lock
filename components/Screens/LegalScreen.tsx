@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Shield, AlertTriangle, Scale, Lock, Camera, Info } from 'lucide-react';
+import { Browser } from '@capacitor/browser';
 
 interface LegalScreenProps {
     onBack: () => void;
@@ -32,19 +33,12 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack }) => {
                     </div>
                     
                     <div className="space-y-3">
-                        <PolicyCard 
-                            icon={AlertTriangle} 
-                            color="orange"
-                            title="Physical Safety Disclaimer"
-                            content="FitLock requires physical exercise (e.g., squats, pushups) to unlock apps. By using this app, you acknowledge that you are responsible for your own safety. You agree to only exercise in a safe environment, within your physical limits. The developers of FitLock are not liable for any injuries or accidents that occur while using the app."
-                        />
-                        
-                        <PolicyCard 
-                            icon={Info} 
-                            color="blue"
-                            title="Emergency Clause"
-                            content="FitLock limits access to specified applications on your device. We are not responsible if you cannot access a locked app during an emergency. We strongly advise that you DO NOT lock emergency dialers, phone apps, or essential communication tools. Whitelist your essential apps in the settings."
-                        />
+                        <button 
+                            onClick={() => Browser.open({ url: 'https://sites.google.com/view/fitlock-toc/home' })}
+                            className="w-full bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-5 text-center text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                        >
+                            View Full Terms & Conditions Document
+                        </button>
                     </div>
                 </section>
 
@@ -98,14 +92,12 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack }) => {
                 
                 {/* External Links */}
                 <div className="pt-6 pb-4 flex justify-center">
-                    <a 
-                        href="https://sites.google.com/view/fitlock/home" 
-                        target="_blank" 
-                        rel="noreferrer"
+                    <button 
+                        onClick={() => Browser.open({ url: 'https://sites.google.com/view/fitlock/home' })}
                         className="text-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline p-2"
                     >
                         View Full Privacy Policy Document
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>

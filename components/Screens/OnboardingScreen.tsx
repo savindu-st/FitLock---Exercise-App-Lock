@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Dumbbell, Shield, ArrowRight, Lock } from 'lucide-react';
+import { Browser } from '@capacitor/browser';
 
 interface OnboardingScreenProps {
     onComplete: () => void;
@@ -91,7 +92,20 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                             </div>
                         </div>
                         <p className="text-[13px] text-gray-600 dark:text-gray-400 leading-relaxed select-none">
-                            I understand the physical risks of exercise and agree to the <span className="font-bold text-blue-600 dark:text-blue-400">Terms and Conditions</span> and <span className="font-bold text-blue-600 dark:text-blue-400">Privacy Policy</span>.
+                            I understand the physical risks of exercise and agree to the{' '}
+                            <span 
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); Browser.open({ url: 'https://sites.google.com/view/fitlock-toc/home' }); }}
+                                className="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                            >
+                                Terms and Conditions
+                            </span>{' '}
+                            and{' '}
+                            <span 
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); Browser.open({ url: 'https://sites.google.com/view/fitlock/home' }); }}
+                                className="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                            >
+                                Privacy Policy
+                            </span>.
                         </p>
                     </label>
                 </div>
