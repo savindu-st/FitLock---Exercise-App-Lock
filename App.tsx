@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { ScreenName, AppItem, HistoryItem, ExerciseType } from './types';
-import { saveApps, loadApps, saveHistory, loadHistory, isCameraPermissionAsked, setCameraPermissionAsked } from './utils/storage';
+import { saveApps, loadApps, saveHistory, loadHistory, isCameraPermissionAsked, setCameraPermissionAsked, loadTheme, ThemePreference } from './utils/storage';
 import MobileLayout from './components/Layout/MobileLayout';
 import HomeScreen from './components/Screens/HomeScreen';
 import LockScreen from './components/Screens/LockScreen';
@@ -59,9 +59,43 @@ const App: React.FC = () => {
   const [isLoadingApps, setIsLoadingApps] = useState(true);
   const [previousScreen, setPreviousScreen] = useState<ScreenName>(ScreenName.HOME);
   const [backPressCount, setBackPressCount] = useState(0);
+  const [theme, setTheme] = useState<ThemePreference>(() => loadTheme());
 
   const currentScreenRef = useRef(currentScreen);
   const targetAppRef = useRef(targetApp);
+
+  // Apply theme to document
+  useEffect(() => {
+    const root = document.documentElement;
+    const applyTheme = (currentTheme: ThemePreference) => {
+      if (currentTheme === 'dark') {
+        root.classList.add('dark');
+      } else if (currentTheme === 'light') {
+        root.classList.remove('dark');
+      } else {
+        // system
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
+      }
+    };
+    
+    applyTheme(theme);
+
+    // Listen for system changes if system theme
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = (e: MediaQueryListEvent) => {
+        if (e.matches) root.classList.add('dark');
+        else root.classList.remove('dark');
+      };
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    }
+  }, [theme]);
 
   useEffect(() => {
     currentScreenRef.current = currentScreen;
@@ -475,9 +509,9 @@ const App: React.FC = () => {
       case ScreenName.HOME:
         if (isLoadingApps) {
           return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 z-10">
               <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-sm text-gray-500 font-medium">Loading apps...</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Loading apps...</p>
             </div>
           );
         }
@@ -494,9 +528,9 @@ const App: React.FC = () => {
       case ScreenName.SETTINGS:
         if (isLoadingApps) {
           return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 z-10">
               <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-sm text-gray-500 font-medium">Scanning system apps...</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Scanning system apps...</p>
             </div>
           );
         }
@@ -535,10 +569,14 @@ const App: React.FC = () => {
         );
 
       case ScreenName.PROFILE:
-        return <ProfileScreen onNavigate={(screen) => {
-          setPreviousScreen(ScreenName.PROFILE);
-          setCurrentScreen(screen);
-        }} />;
+        return <ProfileScreen 
+          onNavigate={(screen) => {
+            setPreviousScreen(ScreenName.PROFILE);
+            setCurrentScreen(screen);
+          }}
+          currentTheme={theme}
+          onThemeChange={setTheme}
+        />;
 
       case ScreenName.PRIVACY_POLICY:
         return <PrivacyPolicyScreen onBack={() => setCurrentScreen(ScreenName.PROFILE)} />;
@@ -593,8 +631,8 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white flex flex-col">
-      <div className="w-full min-h-screen bg-white relative flex flex-col">
+    <div className="min-h-screen w-full bg-white dark:bg-gray-950 flex flex-col">
+      <div className="w-full min-h-screen bg-white dark:bg-gray-950 relative flex flex-col">
         <MobileLayout
           title={getTitle()}
           currentScreen={currentScreen}

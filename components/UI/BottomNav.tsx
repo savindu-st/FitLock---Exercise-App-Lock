@@ -17,7 +17,7 @@ const NAV_ITEMS: NavItem[] = [
 const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate }) => {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex items-start justify-around px-2 pt-2 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-start justify-around px-2 pt-2 z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] dark:shadow-none"
       style={{ paddingBottom: 'var(--nav-bar-height, 0px)' }}
     >
       {NAV_ITEMS.map((item) => {
@@ -33,17 +33,17 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate }) => {
             <div
               className={`
                 p-2 rounded-2xl transition-all duration-300
-                ${isActive ? 'bg-blue-100 text-blue-600 scale-105' : 'text-gray-400'}
+                ${isActive ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 scale-105' : 'text-gray-400 dark:text-gray-500'}
               `}
             >
               <Icon
                 size={22}
                 strokeWidth={isActive ? 2.5 : 1.8}
                 fill={isActive ? "currentColor" : "none"}
-                className={isActive ? "fill-blue-600/20" : ""}
+                className={isActive ? "fill-blue-600/20 dark:fill-blue-400/20" : ""}
               />
             </div>
-            <span className={`text-[11px] font-medium transition-colors ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
+            <span className={`text-[11px] font-medium transition-colors ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
               {item.label}
             </span>
           </button>

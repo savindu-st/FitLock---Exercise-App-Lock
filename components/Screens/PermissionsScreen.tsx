@@ -50,8 +50,8 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
             title: 'Display Over Other Apps',
             description: 'Required to show the exercise lock screen when you open a locked app.',
             icon: Layers,
-            iconBg: 'bg-purple-100',
-            iconColor: 'text-purple-600',
+            iconBg: 'bg-purple-100 dark:bg-purple-900/30',
+            iconColor: 'text-purple-600 dark:text-purple-400',
             granted: false,
             critical: true,
             check: async () => {
@@ -69,8 +69,8 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
             title: 'Usage Access',
             description: 'Required to detect which app you opened so FitLock can trigger a challenge.',
             icon: BarChart3,
-            iconBg: 'bg-orange-100',
-            iconColor: 'text-orange-600',
+            iconBg: 'bg-orange-100 dark:bg-orange-900/30',
+            iconColor: 'text-orange-600 dark:text-orange-400',
             granted: false,
             critical: true,
             check: async () => {
@@ -88,8 +88,8 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
             title: 'Camera',
             description: 'Needed for the AI exercise tracker to count your reps using your camera.',
             icon: Camera,
-            iconBg: 'bg-blue-100',
-            iconColor: 'text-blue-600',
+            iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+            iconColor: 'text-blue-600 dark:text-blue-400',
             granted: false,
             critical: true,
             check: async () => {
@@ -107,8 +107,8 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
             title: 'Notifications',
             description: 'Allows FitLock to send reminders and lock status alerts.',
             icon: Bell,
-            iconBg: 'bg-green-100',
-            iconColor: 'text-green-600',
+            iconBg: 'bg-green-100 dark:bg-green-900/30',
+            iconColor: 'text-green-600 dark:text-green-400',
             granted: false,
             critical: false,
             check: async () => {
@@ -175,20 +175,20 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
 
     if (loading) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50">
+            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950">
                 <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-3" />
-                <p className="text-sm text-gray-500 font-medium">Checking permissions…</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Checking permissions…</p>
             </div>
         );
     }
 
     return (
-        <div className="flex-1 bg-gray-50 overflow-y-auto">
+        <div className="flex-1 bg-gray-50 dark:bg-gray-950 overflow-y-auto">
             {/* Header */}
-            <div className="bg-white px-4 pt-4 pb-5 border-b border-gray-100">
+            <div className="bg-white dark:bg-gray-900 px-4 pt-4 pb-5 border-b border-gray-100 dark:border-gray-800">
                 <button
                     onClick={onBack}
-                    className="flex items-center gap-1 text-blue-600 text-sm font-medium mb-4 active:opacity-70 transition-opacity"
+                    className="flex items-center gap-1 text-blue-600 dark:text-blue-400 text-sm font-medium mb-4 active:opacity-70 transition-opacity"
                 >
                     <ArrowLeft size={18} />
                     Back
@@ -197,19 +197,19 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
                 {/* Status Summary */}
                 <div className={`
           flex items-center gap-3 p-4 rounded-2xl
-          ${allGranted ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}
+          ${allGranted ? 'bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30' : 'bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30'}
         `}>
                     <div className={`
             p-2.5 rounded-xl
-            ${allGranted ? 'bg-green-100' : 'bg-amber-100'}
+            ${allGranted ? 'bg-green-100 dark:bg-green-800/50' : 'bg-amber-100 dark:bg-amber-800/50'}
           `}>
-                        <ShieldCheck size={24} className={allGranted ? 'text-green-600' : 'text-amber-600'} />
+                        <ShieldCheck size={24} className={allGranted ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'} />
                     </div>
                     <div>
-                        <p className={`font-semibold text-sm ${allGranted ? 'text-green-800' : 'text-amber-800'}`}>
+                        <p className={`font-semibold text-sm ${allGranted ? 'text-green-800 dark:text-green-300' : 'text-amber-800 dark:text-amber-300'}`}>
                             {allGranted ? 'All Permissions Granted' : `${grantedCount} of ${totalCount} Granted`}
                         </p>
-                        <p className={`text-xs mt-0.5 ${allGranted ? 'text-green-600' : 'text-amber-600'}`}>
+                        <p className={`text-xs mt-0.5 ${allGranted ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
                             {allGranted
                                 ? 'FitLock is fully configured and ready to go!'
                                 : 'Grant all permissions for FitLock to work properly.'}
@@ -226,10 +226,10 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
                         <div
                             key={perm.id}
                             className={`
-                bg-white rounded-2xl border overflow-hidden transition-all
+                bg-white dark:bg-gray-900 rounded-2xl border overflow-hidden transition-all
                 ${!perm.granted && perm.critical
-                                    ? 'border-red-200 shadow-sm shadow-red-100'
-                                    : 'border-gray-100 shadow-sm'}
+                                    ? 'border-red-200 dark:border-red-800/50 shadow-sm shadow-red-100 dark:shadow-none'
+                                    : 'border-gray-100 dark:border-gray-800 shadow-sm'}
               `}
                         >
                             <div className="p-4 flex items-start gap-3">
@@ -241,27 +241,27 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
                                 {/* Text */}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="font-semibold text-gray-900 text-sm">{perm.title}</h3>
+                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{perm.title}</h3>
                                         {perm.critical && !perm.granted && (
-                                            <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full uppercase">
+                                            <span className="text-[10px] font-bold bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full uppercase">
                                                 Required
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-gray-500 leading-relaxed">{perm.description}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{perm.description}</p>
                                 </div>
 
                                 {/* Status */}
                                 <div className="shrink-0 pt-0.5">
                                     {perm.granted ? (
-                                        <div className="flex items-center gap-1 bg-green-50 px-2.5 py-1 rounded-full">
-                                            <CheckCircle2 size={14} className="text-green-600" />
-                                            <span className="text-xs font-semibold text-green-700">Granted</span>
+                                        <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-full">
+                                            <CheckCircle2 size={14} className="text-green-600 dark:text-green-400" />
+                                            <span className="text-xs font-semibold text-green-700 dark:text-green-400">Granted</span>
                                         </div>
                                     ) : (
-                                        <div className="flex items-center gap-1 bg-red-50 px-2.5 py-1 rounded-full">
-                                            <XCircle size={14} className="text-red-500" />
-                                            <span className="text-xs font-semibold text-red-600">Denied</span>
+                                        <div className="flex items-center gap-1 bg-red-50 dark:bg-red-900/20 px-2.5 py-1 rounded-full">
+                                            <XCircle size={14} className="text-red-500 dark:text-red-400" />
+                                            <span className="text-xs font-semibold text-red-600 dark:text-red-400">Denied</span>
                                         </div>
                                     )}
                                 </div>
@@ -277,7 +277,7 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
                       transition-all active:scale-[0.98]
                       ${perm.critical
                                                 ? 'bg-blue-600 text-white active:bg-blue-700'
-                                                : 'bg-gray-100 text-gray-700 active:bg-gray-200'}
+                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 active:bg-gray-200 dark:active:bg-gray-700'}
                     `}
                                     >
                                         <ExternalLink size={14} />
@@ -292,7 +292,7 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
 
             {/* Footer info */}
             <div className="px-6 pb-8 pt-2">
-                <p className="text-center text-[11px] text-gray-400 leading-relaxed">
+                <p className="text-center text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
                     Some permissions open Android system settings.
                     <br />
                     Grant the permission there and return to FitLock.

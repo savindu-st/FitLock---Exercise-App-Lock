@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
     HISTORY: 'fitlock_history',
     PROFILE: 'fitlock_profile',
     CAMERA_ASKED: 'fitlock_camera_asked',
+    THEME: 'fitlock_theme',
 } as const;
 
 // --- Camera Permission ---
@@ -91,3 +92,25 @@ export const loadProfile = (): UserProfile => {
         return DEFAULT_PROFILE;
     }
 };
+
+// --- Theme ---
+export type ThemePreference = 'light' | 'dark' | 'system';
+
+export const saveTheme = (theme: ThemePreference): void => {
+    try {
+        localStorage.setItem(STORAGE_KEYS.THEME, theme);
+    } catch (e) {
+        console.error('Failed to save theme:', e);
+    }
+};
+
+export const loadTheme = (): ThemePreference => {
+    try {
+        const data = localStorage.getItem(STORAGE_KEYS.THEME) as ThemePreference;
+        return data || 'system';
+    } catch (e) {
+        console.error('Failed to load theme:', e);
+        return 'system';
+    }
+};
+

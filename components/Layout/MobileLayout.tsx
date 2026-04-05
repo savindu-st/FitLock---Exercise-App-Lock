@@ -19,7 +19,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
   actions
 }) => {
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
 
 
       <AppBar
