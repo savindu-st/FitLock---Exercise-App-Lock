@@ -122,19 +122,30 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
         const rightAnkle = landmarks[28];
 
         const isHeadVisible = nose.visibility > 0.5;
-        const isLeftArmVisible = leftShoulder.visibility > 0.5 && leftElbow.visibility > 0.5 && leftWrist.visibility > 0.5;
-        const isRightArmVisible = rightShoulder.visibility > 0.5 && rightElbow.visibility > 0.5 && rightWrist.visibility > 0.5;
-        const isLeftLegVisible = leftHip.visibility > 0.5 && leftKnee.visibility > 0.5 && leftAnkle.visibility > 0.5;
-        const isRightLegVisible = rightHip.visibility > 0.5 && rightKnee.visibility > 0.5 && rightAnkle.visibility > 0.5;
+        let isFullBodyVisible = false;
 
-        // Enforce full body visibility before we start counting
-        const isFullBodyVisible = isHeadVisible && 
-                                 (isLeftArmVisible || isRightArmVisible) && 
-                                 (isLeftLegVisible || isRightLegVisible);
+        if (currentType === ExerciseType.PUSHUPS) {
+          // For pushups, legs might be hidden if facing the camera. Only require head and arms.
+          const leftArmVis = leftShoulder.visibility > 0.5 && leftElbow.visibility > 0.5;
+          const rightArmVis = rightShoulder.visibility > 0.5 && rightElbow.visibility > 0.5;
+          isFullBodyVisible = isHeadVisible && (leftArmVis || rightArmVis);
+        } else if (currentType === ExerciseType.SQUATS) {
+          // For squats, ensure head and at least one leg is visible.
+          const leftLegVis = leftHip.visibility > 0.5 && leftKnee.visibility > 0.5;
+          const rightLegVis = rightHip.visibility > 0.5 && rightKnee.visibility > 0.5;
+          isFullBodyVisible = isHeadVisible && (leftLegVis || rightLegVis);
+        } else if (currentType === ExerciseType.JUMPING_JACKS) {
+          // For jumping jacks, extremities (wrists/ankles) might leave the frame. Only strictly require shoulders/elbows/hips/knees.
+          const leftArmVis = leftShoulder.visibility > 0.5 && leftElbow.visibility > 0.5;
+          const rightArmVis = rightShoulder.visibility > 0.5 && rightElbow.visibility > 0.5;
+          const leftLegVis = leftHip.visibility > 0.5 && leftKnee.visibility > 0.5;
+          const rightLegVis = rightHip.visibility > 0.5 && rightKnee.visibility > 0.5;
+          isFullBodyVisible = isHeadVisible && leftArmVis && rightArmVis && leftLegVis && rightLegVis;
+        }
 
         if (!isFullBodyVisible) {
           if (stateRef.current !== ExerciseState.COMPLETED) {
-            setFeedback("Please make sure your full body is visible");
+            setFeedback("Please make sure your body is visible in the camera");
           }
         } else {
           // --- EXERCISE LOGIC ---
@@ -152,10 +163,15 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
             const ankle = useLeft ? leftAnkle : rightAnkle;
 
             const armAngle = calculateAngle(shoulder, elbow, wrist);
-            const bodyAngle = calculateAngle(shoulder, hip, ankle);
+            
+            // Enforce straight back ONLY if ankle is visible (it might be hidden if facing the camera)
+            let isBackStraight = true;
+            if (ankle.visibility > 0.5 && hip.visibility > 0.5) {
+               const bodyAngle = calculateAngle(shoulder, hip, ankle);
+               if (bodyAngle < 130) isBackStraight = false;
+            }
 
-            // Enforce straight back (plank form)
-            if (bodyAngle < 130) {
+            if (!isBackStraight) {
               if (stateRef.current !== ExerciseState.COMPLETED) {
                 setFeedback("Keep your back straight!");
               }
@@ -211,43 +227,46 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
             }
 
           } else if (currentType === ExerciseType.JUMPING_JACKS) {
-            // Both arms and legs should be visible
-            if (isLeftArmVisible && isRightArmVisible && isLeftLegVisible && isRightLegVisible) {
-              const headY = nose.y;
+            const headY = nose.y;
 
-              // Hands UP: Wrists go above the head
-              const handsUp = leftWrist.y < headY && rightWrist.y < headY;
-              
-              // Hands DOWN: Wrists go down past the hips
-              const handsDown = leftWrist.y > leftHip.y && rightWrist.y > rightHip.y;
-              
-              // Feet wide vs together logic
-              const ankleDist = Math.abs(leftAnkle.x - rightAnkle.x);
-              const shoulderDist = Math.abs(leftShoulder.x - rightShoulder.x);
-              const ratio = shoulderDist > 0.01 ? ankleDist / shoulderDist : 1;
-              const feetWide = ratio > 1.2;
-              const feetTogether = ratio <= 1.2;
+            // Fallback to elbows if wrists are missing
+            const getHandY = (wrist: any, elbow: any) => wrist.visibility > 0.5 ? wrist.y : elbow.y;
+            const leftHandY = getHandY(leftWrist, leftElbow);
+            const rightHandY = getHandY(rightWrist, rightElbow);
 
-              // Enforce full body jumping jack form
-              if (handsDown && feetTogether) { // DOWN (Start/End position)
-                if (stateRef.current === ExerciseState.UP) {
-                  countRef.current += 1;
-                  setReps(countRef.current);
-                  stateRef.current = ExerciseState.DOWN;
-                  setFeedback("Good! Jump up.");
-                } else if (stateRef.current !== ExerciseState.COMPLETED) {
-                  stateRef.current = ExerciseState.DOWN;
-                  setFeedback("Jump!");
-                }
-              } else if (handsUp && feetWide) { // UP (Star position)
-                if (stateRef.current === ExerciseState.DOWN || stateRef.current === ExerciseState.IDLE) {
-                  stateRef.current = ExerciseState.UP;
-                  setFeedback("Back down!");
-                }
+            // UP: arms above the head or highest point
+            const handsUp = leftHandY < headY && rightHandY < headY;
+            
+            // DOWN: arms lowered back below the shoulder line
+            const handsDown = leftHandY > leftShoulder.y && rightHandY > rightShoulder.y;
+            
+            // Fallback to knees if ankles are missing
+            const getFootX = (ankle: any, knee: any) => ankle.visibility > 0.5 ? ankle.x : knee.x;
+            const leftFootX = getFootX(leftAnkle, leftKnee);
+            const rightFootX = getFootX(rightAnkle, rightKnee);
+
+            const feetDist = Math.abs(leftFootX - rightFootX);
+            const shoulderDist = Math.abs(leftShoulder.x - rightShoulder.x);
+            
+            const ratio = shoulderDist > 0.01 ? feetDist / shoulderDist : 1;
+            const feetWide = ratio > 1.2;
+            const feetTogether = ratio <= 1.2;
+
+            // Enforce form
+            if (handsDown && feetTogether) { // DOWN (Start/End position)
+              if (stateRef.current === ExerciseState.UP) {
+                countRef.current += 1;
+                setReps(countRef.current);
+                stateRef.current = ExerciseState.DOWN;
+                setFeedback("Good! Jump up.");
+              } else if (stateRef.current !== ExerciseState.COMPLETED) {
+                stateRef.current = ExerciseState.DOWN;
+                setFeedback("Jump!");
               }
-            } else {
-              if (stateRef.current !== ExerciseState.COMPLETED) {
-                setFeedback("Make sure both arms and legs are visible");
+            } else if (handsUp && feetWide) { // UP (Star position)
+              if (stateRef.current === ExerciseState.DOWN || stateRef.current === ExerciseState.IDLE) {
+                stateRef.current = ExerciseState.UP;
+                setFeedback("Back down!");
               }
             }
           }
