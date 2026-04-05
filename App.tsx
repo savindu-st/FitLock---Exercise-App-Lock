@@ -217,7 +217,7 @@ const App: React.FC = () => {
         const applications = response?.apps || [];
 
         // Merge real apps with saved settings
-        const mergedApps: AppItem[] = applications.map((app: any) => {
+        let mergedApps: AppItem[] = applications.map((app: any) => {
           const pkgName = app.packageName || '';
           const saved = savedApps.find((s: AppItem) => s.packageName === pkgName);
           return {
@@ -229,6 +229,24 @@ const App: React.FC = () => {
             isLocked: saved?.isLocked || false,
             requiredReps: saved?.requiredReps || 5
           };
+        });
+
+        // Filter out essential system apps to prevent soft-bricks or emergency blockages
+        mergedApps = mergedApps.filter(app => {
+          const pkg = app.packageName.toLowerCase();
+          const appName = app.name.toLowerCase().trim();
+          return !(
+            pkg.includes('dialer') || 
+            pkg.includes('settings') || 
+            pkg.includes('phone') || 
+            pkg.includes('contacts') || 
+            pkg.includes('systemui') ||
+            pkg.includes('telecom') ||
+            pkg.includes('incallui') ||
+            appName === 'call' ||
+            appName === 'phone' ||
+            appName === 'settings'
+          );
         });
 
         // Sort apps alphabetically by name
