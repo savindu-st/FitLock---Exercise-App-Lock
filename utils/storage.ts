@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
     PROFILE: 'fitlock_profile',
     CAMERA_ASKED: 'fitlock_camera_asked',
     THEME: 'fitlock_theme',
+    ONBOARDING_COMPLETED: 'fitlock_onboarding_completed',
 } as const;
 
 // --- Camera Permission ---
@@ -22,6 +23,24 @@ export const isCameraPermissionAsked = (): boolean => {
         return localStorage.getItem(STORAGE_KEYS.CAMERA_ASKED) === 'true';
     } catch (e) {
         console.error('Failed to load camera permission flag:', e);
+        return false;
+    }
+};
+
+// --- Onboarding ---
+export const setOnboardingCompleted = (): void => {
+    try {
+        localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, 'true');
+    } catch (e) {
+        console.error('Failed to save onboarding flag:', e);
+    }
+};
+
+export const isOnboardingCompleted = (): boolean => {
+    try {
+        return localStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED) === 'true';
+    } catch (e) {
+        console.error('Failed to load onboarding flag:', e);
         return false;
     }
 };

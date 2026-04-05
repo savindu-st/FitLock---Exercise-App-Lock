@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Mail, Shield, Smartphone, ChevronRight, Check, Moon, Sun } from 'lucide-react';
+import { User, Shield, Smartphone, ChevronRight, Moon, Sun, Scale } from 'lucide-react';
 import { loadProfile, UserProfile, ThemePreference, saveTheme } from '../../utils/storage';
 import { ScreenName } from '../../types';
 import { useSubscription } from '../Context/SubscriptionContext';
@@ -44,12 +44,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, currentTheme 
       <div className="mt-6 px-4 space-y-4">
 
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
-          <SettingItem icon={Mail} label="Notice" onClick={() => onNavigate?.(ScreenName.NOTICE)} />
-          <div className="h-px bg-gray-50 dark:bg-gray-800 mx-4" />
           <SettingItem
-            icon={Shield}
-            label="Privacy & Security"
-            onClick={() => onNavigate?.(ScreenName.PRIVACY_POLICY)}
+            icon={Scale}
+            label="Legal Information"
+            onClick={() => onNavigate?.(ScreenName.LEGAL_INFO)}
           />
         </div>
 

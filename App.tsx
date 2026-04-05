@@ -1,14 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { ScreenName, AppItem, HistoryItem, ExerciseType } from './types';
-import { saveApps, loadApps, saveHistory, loadHistory, isCameraPermissionAsked, setCameraPermissionAsked, loadTheme, ThemePreference } from './utils/storage';
+import { saveApps, loadApps, saveHistory, loadHistory, isCameraPermissionAsked, setCameraPermissionAsked, loadTheme, ThemePreference, isOnboardingCompleted, setOnboardingCompleted } from './utils/storage';
 import MobileLayout from './components/Layout/MobileLayout';
 import HomeScreen from './components/Screens/HomeScreen';
 import LockScreen from './components/Screens/LockScreen';
 import ProfileScreen from './components/Screens/ProfileScreen';
 import AppLockSettingsScreen from './components/Screens/AppLockSettingsScreen';
 import HistoryScreen from './components/Screens/HistoryScreen';
-import PrivacyPolicyScreen from './components/Screens/PrivacyPolicyScreen';
-import NoticeScreen from './components/Screens/NoticeScreen';
+import LegalScreen from './components/Screens/LegalScreen';
+import OnboardingScreen from './components/Screens/OnboardingScreen';
 import CameraPermissionScreen from './components/Screens/CameraPermissionScreen';
 import PermissionsScreen from './components/Screens/PermissionsScreen';
 import { Settings, CheckCircle } from 'lucide-react';
@@ -48,7 +48,7 @@ import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admo
 const App: React.FC = () => {
   const { isPremium } = useSubscription();
   const [currentScreen, setCurrentScreen] = useState<ScreenName>(
-    isCameraPermissionAsked() ? ScreenName.HOME : ScreenName.CAMERA_PERMISSION
+    !isOnboardingCompleted() ? ScreenName.ONBOARDING : (isCameraPermissionAsked() ? ScreenName.HOME : ScreenName.CAMERA_PERMISSION)
   );
   const [apps, setApps] = useState<AppItem[]>([]);
   const [targetApp, setTargetApp] = useState<AppItem | null>(null);
@@ -137,13 +137,20 @@ const App: React.FC = () => {
   // AdMob Banner setup
   const isFullScreen = currentScreen === ScreenName.LOCK_CHALLENGE || 
                        currentScreen === ScreenName.CAMERA_PERMISSION || 
+                       currentScreen === ScreenName.ONBOARDING ||
                        currentScreen === ScreenName.APP_CONTENT;
 
   useEffect(() => {
     let mounted = true;
 
     const setupAds = async () => {
-      if (isPremium) {
+      try {
+        await AdMob.initialize();
+      } catch (err) {
+        console.warn('AdMob Init Error:', err);
+      }
+
+      if (isPremium || isFullScreen) {
         try {
           await AdMob.hideBanner();
           await AdMob.removeBanner();
@@ -151,10 +158,9 @@ const App: React.FC = () => {
         return;
       }
 
-      try {
-        await AdMob.initialize();
-        if (!mounted) return;
+      if (!mounted) return;
 
+      try {
         // Ensure any existing banner is removed before showing a new one
         // This ensures Native Android plugin creates it afresh with the new margin
         try {
@@ -168,7 +174,7 @@ const App: React.FC = () => {
           adId: 'ca-app-pub-3940256099942544/6300978111', // Test Banner ID
           adSize: BannerAdSize.BANNER,
           position: BannerAdPosition.BOTTOM_CENTER,
-          margin: isFullScreen ? 0 : 70,
+          margin: isFullScreen ? 0 : 70, // this should realistically be always 70 here since isFullScreen is already returned
         });
       } catch (err) {
         console.warn('AdMob Error:', err);
@@ -337,7 +343,7 @@ const App: React.FC = () => {
         }
       } else if (screen === ScreenName.CAMERA_PERMISSION) {
         // Do nothing to avoid bypassing
-      } else if (screen === ScreenName.PRIVACY_POLICY || screen === ScreenName.NOTICE) {
+      } else if (screen === ScreenName.LEGAL_INFO) {
         setCurrentScreen(ScreenName.PROFILE);
       } else {
         // For Settings, History, Profile, etc.
@@ -578,11 +584,8 @@ const App: React.FC = () => {
           onThemeChange={setTheme}
         />;
 
-      case ScreenName.PRIVACY_POLICY:
-        return <PrivacyPolicyScreen onBack={() => setCurrentScreen(ScreenName.PROFILE)} />;
-
-      case ScreenName.NOTICE:
-        return <NoticeScreen onBack={() => setCurrentScreen(ScreenName.PROFILE)} />;
+      case ScreenName.LEGAL_INFO:
+        return <LegalScreen onBack={() => setCurrentScreen(ScreenName.PROFILE)} />;
 
       case ScreenName.CAMERA_PERMISSION:
         return <CameraPermissionScreen onPermissionGranted={handleCameraPermissionDone} onSkip={handleCameraPermissionDone} />;
@@ -608,6 +611,18 @@ const App: React.FC = () => {
     return <CameraPermissionScreen onPermissionGranted={handleCameraPermissionDone} onSkip={handleCameraPermissionDone} />;
   }
 
+  // Onboarding screen is full-screen
+  if (currentScreen === ScreenName.ONBOARDING) {
+    return (
+      <OnboardingScreen 
+        onComplete={() => {
+          setOnboardingCompleted();
+          setCurrentScreen(isCameraPermissionAsked() ? ScreenName.HOME : ScreenName.CAMERA_PERMISSION);
+        }} 
+      />
+    );
+  }
+
   // If we are in Lock Challenge, we want a Full Screen experience (no App Bar, No Bottom Nav)
   if (currentScreen === ScreenName.LOCK_CHALLENGE && targetApp) {
     return (
@@ -623,8 +638,7 @@ const App: React.FC = () => {
       case ScreenName.SETTINGS: return "App Lock";
       case ScreenName.HISTORY: return "Workout History";
       case ScreenName.PROFILE: return "Profile";
-      case ScreenName.PRIVACY_POLICY: return "Privacy Policy";
-      case ScreenName.NOTICE: return "Notice";
+      case ScreenName.LEGAL_INFO: return "Legal Information";
       case ScreenName.PERMISSIONS: return "Permissions";
       default: return "Home";
     }
