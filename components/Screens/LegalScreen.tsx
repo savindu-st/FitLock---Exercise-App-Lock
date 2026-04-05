@@ -96,11 +96,16 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack }) => {
                     </div>
                 </section>
                 
-                {/* Contact Footer */}
-                <div className="pt-6 pb-4">
-                    <p className="text-center text-xs text-gray-400 dark:text-gray-500 max-w-xs mx-auto">
-                        If you have any questions regarding these terms, please contact us via our official repository.
-                    </p>
+                {/* External Links */}
+                <div className="pt-6 pb-4 flex justify-center">
+                    <a 
+                        href="https://sites.google.com/view/fitlock/home" 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="text-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline p-2"
+                    >
+                        View Full Privacy Policy Document
+                    </a>
                 </div>
             </div>
         </div>
