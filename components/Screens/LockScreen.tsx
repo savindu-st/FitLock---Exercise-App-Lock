@@ -22,12 +22,12 @@ const EXERCISE_GUIDES = {
   [ExerciseType.PUSHUPS]: {
     title: "How to do Pushups",
     steps: [
-      "Ensure your full body (head to toe) is visible.",
-      "Start in a high plank position with arms straight (UP state).",
-      "Lower your body until your elbows are bent significantly (< 90°).",
+      "Ensure your upper body (head, shoulders, elbows) is visible.",
+      "Start in a high plank position with arms extended (UP state).",
+      "Lower your body by bending your elbows.",
       "Push back up to the starting position to count 1 rep."
     ],
-    tips: "Keep your back straight and face the camera side-on for best detection."
+    tips: "You can face the camera or be side-on. Just make sure your shoulders and elbows are visible."
   },
   [ExerciseType.SQUATS]: {
     title: "How to do Squats",
@@ -160,37 +160,46 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
             const elbow = useLeft ? leftElbow : rightElbow;
             const wrist = useLeft ? leftWrist : rightWrist;
             const hip = useLeft ? leftHip : rightHip;
-            const ankle = useLeft ? leftAnkle : rightAnkle;
 
-            const armAngle = calculateAngle(shoulder, elbow, wrist);
-            
-            // Enforce straight back ONLY if ankle is visible (it might be hidden if facing the camera)
-            let isBackStraight = true;
-            if (ankle.visibility > 0.5 && hip.visibility > 0.5) {
-               const bodyAngle = calculateAngle(shoulder, hip, ankle);
-               if (bodyAngle < 130) isBackStraight = false;
+            // Detect if user is facing the camera (both shoulders visible & close in X)
+            const shoulderXDiff = Math.abs(leftShoulder.x - rightShoulder.x);
+            const isFacingCamera = leftShoulder.visibility > 0.5 && rightShoulder.visibility > 0.5 && shoulderXDiff < 0.15;
+
+            let isDown = false;
+            let isUp = false;
+
+            if (isFacingCamera) {
+              // When facing camera, arm angle is unreliable. 
+              // Use the vertical position of shoulders relative to elbows/wrists.
+              // DOWN: shoulders drop close to or below elbow level
+              // UP: shoulders are well above elbow level
+              const avgElbowY = (leftElbow.y + rightElbow.y) / 2;
+              const avgShoulderY = (leftShoulder.y + rightShoulder.y) / 2;
+              const yDiff = avgElbowY - avgShoulderY; // positive = shoulders above elbows
+
+              isUp = yDiff > 0.06;   // shoulders clearly above elbows
+              isDown = yDiff < 0.02; // shoulders near elbow level
+            } else {
+              // Side-on view: use arm angle (relaxed thresholds)
+              const armAngle = calculateAngle(shoulder, elbow, wrist);
+              isUp = armAngle > 140;   // was 150, now more forgiving
+              isDown = armAngle < 110;  // was 90, now much more forgiving
             }
 
-            if (!isBackStraight) {
-              if (stateRef.current !== ExerciseState.COMPLETED) {
-                setFeedback("Keep your back straight!");
+            if (isUp) {
+              if (stateRef.current === ExerciseState.DOWN) {
+                countRef.current += 1;
+                setReps(countRef.current);
+                stateRef.current = ExerciseState.UP;
+                setFeedback("Good! Down again.");
+              } else if (stateRef.current !== ExerciseState.COMPLETED) {
+                stateRef.current = ExerciseState.UP;
+                setFeedback("Start going down");
               }
-            } else {
-              if (armAngle > 150) { // UP
-                if (stateRef.current === ExerciseState.DOWN) {
-                  countRef.current += 1;
-                  setReps(countRef.current);
-                  stateRef.current = ExerciseState.UP;
-                  setFeedback("Good! Down again.");
-                } else if (stateRef.current !== ExerciseState.COMPLETED) {
-                  stateRef.current = ExerciseState.UP;
-                  setFeedback("Start going down");
-                }
-              } else if (armAngle < 90) { // DOWN
-                if (stateRef.current === ExerciseState.UP) {
-                  stateRef.current = ExerciseState.DOWN;
-                  setFeedback("Push UP!");
-                }
+            } else if (isDown) {
+              if (stateRef.current === ExerciseState.UP || stateRef.current === ExerciseState.IDLE) {
+                stateRef.current = ExerciseState.DOWN;
+                setFeedback("Push UP!");
               }
             }
 
