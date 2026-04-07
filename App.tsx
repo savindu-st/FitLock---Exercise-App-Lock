@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { ScreenName, AppItem, HistoryItem, ExerciseType } from './types';
 import { saveApps, loadApps, saveHistory, loadHistory, isCameraPermissionAsked, setCameraPermissionAsked, loadTheme, ThemePreference, isOnboardingCompleted, setOnboardingCompleted } from './utils/storage';
+import { prefetchIcons } from './utils/iconCache';
 import MobileLayout from './components/Layout/MobileLayout';
 import HomeScreen from './components/Screens/HomeScreen';
 import LockScreen from './components/Screens/LockScreen';
@@ -17,6 +18,7 @@ import { registerPlugin } from '@capacitor/core';
 interface InstalledAppsPlugin {
   getApps(): Promise<{ apps: Array<{ name: string; packageName: string; icon?: string }> }>;
   getAppIcon(options: { packageName: string }): Promise<{ icon: string }>;
+  getAppIcons(options: { packageNames: string[] }): Promise<{ icons: Record<string, string> }>;
 }
 
 interface PermissionsPluginInterface {
@@ -253,6 +255,13 @@ const App: React.FC = () => {
         mergedApps.sort((a, b) => a.name.localeCompare(b.name));
 
         setApps(mergedApps);
+
+        // Prefetch icons in the background — UI shows instantly with fallback icons
+        // Icons load progressively and AppIcon picks them up from cache
+        const packageNames = mergedApps.map(a => a.packageName);
+        prefetchIcons(packageNames).catch(err =>
+          console.warn('Icon prefetch error:', err)
+        );
       } catch (err) {
         console.error('Failed to fetch installed apps:', err);
         // Fallback to saved apps if native plugin fails (e.g. in browser)

@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppItem } from '../../types';
 import { Smartphone, Facebook, Instagram, Twitter, MessageCircle, Chrome, Camera, Mail, Map } from 'lucide-react';
-import { registerPlugin } from '@capacitor/core';
-import { getCachedIcon, setCachedIcon } from '../../utils/iconCache';
-
-interface InstalledAppsPlugin {
-    getAppIcon(options: { packageName: string }): Promise<{ icon: string }>;
-}
-const InstalledApps = registerPlugin<InstalledAppsPlugin>('InstalledApps');
+import { getCachedIcon } from '../../utils/iconCache';
 
 interface AppIconProps {
     app: AppItem;
@@ -21,28 +15,32 @@ const AppIcon: React.FC<AppIconProps> = ({ app, className = "w-full h-full objec
         return getCachedIcon(app.packageName);
     });
 
+    // Poll the cache briefly if no icon yet — batch prefetcher populates it
     useEffect(() => {
-        let isMounted = true;
         if (iconData || app.icon === 'DEEP_LINK') return;
 
-        const fetchIcon = async () => {
-            try {
-                const { icon } = await InstalledApps.getAppIcon({ packageName: app.packageName });
-                if (isMounted && icon) {
-                    setCachedIcon(app.packageName, icon);
-                    setIconData(icon);
-                }
-            } catch (e) {
-                // Ignore error and fall back
-            }
-        };
+        // Check immediately — cache may already be populated
+        const cached = getCachedIcon(app.packageName);
+        if (cached) {
+            setIconData(cached);
+            return;
+        }
 
-        // Stagger loading slightly to keep UI responsive
-        const timer = setTimeout(fetchIcon, 50);
-        return () => {
-            isMounted = false;
-            clearTimeout(timer);
-        };
+        // Poll every 200ms for up to 10s waiting for the prefetcher
+        let attempts = 0;
+        const maxAttempts = 50;
+        const interval = setInterval(() => {
+            attempts++;
+            const icon = getCachedIcon(app.packageName);
+            if (icon) {
+                setIconData(icon);
+                clearInterval(interval);
+            } else if (attempts >= maxAttempts) {
+                clearInterval(interval);
+            }
+        }, 200);
+
+        return () => clearInterval(interval);
     }, [app.packageName, iconData, app.icon]);
 
     const renderFallbackIcon = () => {
