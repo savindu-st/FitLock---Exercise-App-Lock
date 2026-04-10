@@ -173,7 +173,7 @@ const App: React.FC = () => {
         if (!mounted) return;
 
         await AdMob.showBanner({
-          adId: 'ca-app-pub-3940256099942544/6300978111', // Test Banner ID
+          adId: import.meta.env.VITE_ADMOB_BANNER_ID || '', // Test Banner ID
           adSize: BannerAdSize.BANNER,
           position: BannerAdPosition.BOTTOM_CENTER,
           margin: isFullScreen ? 0 : 70, // this should realistically be always 70 here since isFullScreen is already returned
@@ -201,9 +201,9 @@ const App: React.FC = () => {
       const platform = Capacitor.getPlatform();
 
       if (platform === 'ios') {
-        await Purchases.configure({ apiKey: "test_txIFCPMNfrJLsYEOgIRjWuwnHkd" }); // Update this if you ever publish to iOS
+        await Purchases.configure({ apiKey: import.meta.env.VITE_REVENUECAT_IOS_KEY || "" }); // Update this if you ever publish to iOS
       } else if (platform === 'android') {
-        await Purchases.configure({ apiKey: "goog_ewdbcRWIBBzkAKtkkRvNSkpZFVZ" });
+        await Purchases.configure({ apiKey: import.meta.env.VITE_REVENUECAT_ANDROID_KEY || "" });
       }
     }
     configurePurchases();
