@@ -293,7 +293,7 @@ const App: React.FC = () => {
     if (apps.length > 0) syncLockedApps();
   }, [apps]);
 
-  // Auto-start monitoring service on launch
+  // Auto-start monitoring service on launch — no delay, service handles re-entry
   useEffect(() => {
     const startMonitoring = async () => {
       try {
@@ -303,9 +303,50 @@ const App: React.FC = () => {
         console.warn('[FitLock] Failed to start monitor service:', err);
       }
     };
-    // Small delay to ensure app is initialized
-    const timer = setTimeout(startMonitoring, 2000);
-    return () => clearTimeout(timer);
+    startMonitoring();
+  }, []);
+
+  // Preload MediaPipe Pose model in background so WASM + model files are cached
+  // This makes the LockScreen camera start much faster on first use
+  useEffect(() => {
+    const preloadPoseModel = async () => {
+      try {
+        // Wait for CDN script to be available
+        if (!(window as any).Pose) {
+          // Script not loaded yet, wait briefly
+          await new Promise<void>((resolve) => {
+            const check = setInterval(() => {
+              if ((window as any).Pose) {
+                clearInterval(check);
+                resolve();
+              }
+            }, 200);
+            // Give up after 10 seconds
+            setTimeout(() => { clearInterval(check); resolve(); }, 10000);
+          });
+        }
+        if (!(window as any).Pose) return;
+
+        console.log('[FitLock] Preloading Pose model...');
+        const warmupPose = new (window as any).Pose({
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+        });
+        warmupPose.setOptions({
+          modelComplexity: 0,
+          smoothLandmarks: false,
+          enableSegmentation: false,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+        // initialize() downloads and compiles the WASM + model, caching them
+        await warmupPose.initialize();
+        warmupPose.close();
+        console.log('[FitLock] Pose model preloaded and cached.');
+      } catch (err) {
+        console.warn('[FitLock] Pose preload failed (non-critical):', err);
+      }
+    };
+    preloadPoseModel();
   }, []);
 
   // Poll for deep-linked challenges from native

@@ -299,48 +299,65 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
       }
     };
 
-    let pollInterval: NodeJS.Timeout;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
     const initMediaPipe = async () => {
       try {
-        console.log('[FitLock] Step 2: Creating Pose instance...');
-        pose = new window.Pose({
-          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
-        });
-
-        console.log('[FitLock] Step 3: Setting options...');
-        pose.setOptions({
-          modelComplexity: 0,
-          smoothLandmarks: true,
-          enableSegmentation: false,
-          minDetectionConfidence: 0.5,
-          minTrackingConfidence: 0.5
-        });
-
-        pose.onResults(onResults);
-        console.log('[FitLock] Step 4: Pose configured.');
-
         if (!videoRef.current) {
           setCameraError('Camera element not ready. Please go back and try again.');
           return;
         }
 
-        // Get camera stream
-        console.log('[FitLock] Step 5: Requesting camera...');
-        let stream: MediaStream;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
+        // --- PARALLEL INIT: Start camera + Pose model at the same time ---
+        console.log('[FitLock] Starting parallel init: Camera + Pose model...');
+
+        // Task 1: Request camera stream
+        const cameraPromise = (async () => {
+          console.log('[FitLock] Requesting camera...');
+          const stream = await navigator.mediaDevices.getUserMedia({
             video: { width: 640, height: 480, facingMode: 'user' }
           });
-          console.log('[FitLock] Step 5 OK: Got stream');
-        } catch (camErr: any) {
-          setCameraError(`Camera access denied: ${camErr?.message || 'Unknown'}. Please grant camera permission.`);
+          console.log('[FitLock] Camera stream acquired.');
+          return stream;
+        })();
+
+        // Task 2: Create and configure Pose model
+        const posePromise = (async () => {
+          console.log('[FitLock] Creating Pose instance...');
+          pose = new window.Pose({
+            locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+          });
+          pose.setOptions({
+            modelComplexity: 0,
+            smoothLandmarks: true,
+            enableSegmentation: false,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+          });
+          pose.onResults(onResults);
+          // Pre-initialize the WASM/model (uses cache if preloaded in App.tsx)
+          await pose.initialize();
+          console.log('[FitLock] Pose model initialized.');
+        })();
+
+        // Wait for both to complete
+        let stream: MediaStream;
+        try {
+          const [cameraStream] = await Promise.all([cameraPromise, posePromise]);
+          stream = cameraStream;
+        } catch (err: any) {
+          // Determine which one failed
+          if (err?.name === 'NotAllowedError' || err?.name === 'NotFoundError' || err?.message?.includes('permission')) {
+            setCameraError(`Camera access denied: ${err?.message || 'Unknown'}. Please grant camera permission.`);
+          } else {
+            setCameraError(`Initialization failed: ${err?.message || 'Unknown error'}`);
+          }
           return;
         }
 
-        // Assign stream and wait for video to actually have pixel data
-        console.log('[FitLock] Step 6: Waiting for video data...');
-        const video = videoRef.current;
+        // Assign stream and wait for video to have pixel data
+        console.log('[FitLock] Waiting for video data...');
+        const video = videoRef.current!;
         video.srcObject = stream;
 
         await new Promise<void>((resolve, reject) => {
@@ -356,23 +373,22 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
           video.play().catch(reject);
         });
 
-        console.log('[FitLock] Step 6 OK: Video ready, size:', video.videoWidth, 'x', video.videoHeight);
+        console.log('[FitLock] Video ready, size:', video.videoWidth, 'x', video.videoHeight);
 
-        // Initialize pose model by sending one frame and waiting
-        console.log('[FitLock] Step 7: Initializing pose model with first frame...');
+        // Send first frame to warm up the pipeline
+        console.log('[FitLock] Processing first frame...');
         try {
           await pose.send({ image: video });
-          console.log('[FitLock] Step 7 OK: First frame processed');
+          console.log('[FitLock] First frame processed.');
         } catch (e) {
-          console.warn('[FitLock] Step 7 WARN: First frame failed, retrying...', e);
-          // Wait a bit and retry
-          await new Promise(r => setTimeout(r, 1000));
+          console.warn('[FitLock] First frame failed, retrying...', e);
+          await new Promise(r => setTimeout(r, 500));
           await pose.send({ image: video });
-          console.log('[FitLock] Step 7 OK: Retry succeeded');
+          console.log('[FitLock] Retry succeeded.');
         }
 
         // Non-blocking frame loop: skip frames while pose is still processing
-        console.log('[FitLock] Step 8: Starting frame loop...');
+        console.log('[FitLock] Starting frame loop...');
         let running = true;
         let processing = false;
         const processFrame = () => {
@@ -415,20 +431,26 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
       }
     }, 20000);
 
-    // Poll for the CDN script instead of a rigid delay
-    let attempts = 0;
-    pollInterval = setInterval(() => {
-      if (window.Pose) {
-        clearInterval(pollInterval);
-        initMediaPipe();
-      } else {
-        attempts++;
-        if (attempts >= 30) { // 30 * 500 = 15s to download script
-          clearInterval(pollInterval);
-          setCameraError('Exercise AI download took too long. Please check your internet connection and try again.');
+    // Start immediately if CDN script is loaded, otherwise poll quickly (100ms)
+    if (window.Pose) {
+      initMediaPipe();
+    } else {
+      let attempts = 0;
+      pollInterval = setInterval(() => {
+        if (window.Pose) {
+          clearInterval(pollInterval!);
+          pollInterval = null;
+          initMediaPipe();
+        } else {
+          attempts++;
+          if (attempts >= 100) { // 100 * 100ms = 10s
+            clearInterval(pollInterval!);
+            pollInterval = null;
+            setCameraError('Exercise AI download took too long. Please check your internet connection and try again.');
+          }
         }
-      }
-    }, 500);
+      }, 100);
+    }
 
     return () => {
       try {
