@@ -212,9 +212,17 @@ const App: React.FC = () => {
   // Fetch real apps and merge with saved lock settings
   useEffect(() => {
     const fetchApps = async () => {
-      setIsLoadingApps(true);
+      const savedApps = loadApps() || [];
+      
+      // Optimistic UI: Immediately show saved apps if they exist
+      if (savedApps.length > 0) {
+        setApps(savedApps);
+        setIsLoadingApps(false);
+      } else {
+        setIsLoadingApps(true);
+      }
+
       try {
-        const savedApps = loadApps() || [];
         const response = await InstalledApps.getApps() as any;
         const applications = response?.apps || [];
 
@@ -255,6 +263,7 @@ const App: React.FC = () => {
         mergedApps.sort((a, b) => a.name.localeCompare(b.name));
 
         setApps(mergedApps);
+        setIsLoadingApps(false);
 
         // Prefetch icons in the background — UI shows instantly with fallback icons
         // Icons load progressively and AppIcon picks them up from cache
@@ -265,7 +274,9 @@ const App: React.FC = () => {
       } catch (err) {
         console.error('Failed to fetch installed apps:', err);
         // Fallback to saved apps if native plugin fails (e.g. in browser)
-        setApps(loadApps() || []);
+        if (savedApps.length === 0) {
+          setApps(loadApps() || []);
+        }
       } finally {
         setIsLoadingApps(false);
       }
