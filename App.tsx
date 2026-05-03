@@ -340,7 +340,7 @@ const App: React.FC = () => {
 
         console.log('[FitLock] Preloading Pose model...');
         const warmupPose = new (window as any).Pose({
-          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+          locateFile: (file: string) => `/mediapipe/${file}`,
         });
         warmupPose.setOptions({
           modelComplexity: 0,

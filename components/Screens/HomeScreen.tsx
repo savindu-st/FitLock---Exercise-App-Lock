@@ -20,21 +20,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick, allPermission
 
       <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-y-6 gap-x-4">
         {apps.map((app) => (
-          <button
-            key={app.id}
-            onClick={() => onAppClick(app)}
-            className="flex flex-col items-center group active:scale-95 transition-transform focus:outline-none"
-          >
-            <div className={`relative w-[60px] h-[60px] rounded-[18px] flex items-center justify-center mb-1.5 overflow-hidden`}>
-              <AppIcon app={app} />
-              {app.isLocked && (
-                <div className="absolute inset-0 bg-black/25 flex items-center justify-center backdrop-blur-[1px]">
-                  <Lock size={18} className="text-white drop-shadow-md" />
-                </div>
-              )}
-            </div>
-            <span className="text-[11px] font-medium text-gray-600 dark:text-gray-300 truncate w-full text-center leading-tight">{app.name}</span>
-          </button>
+          <HomeScreenItem key={app.id} app={app} onClick={onAppClick} />
         ))}
       </div>
 
@@ -65,4 +51,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick, allPermission
   );
 };
 
-export default HomeScreen;
+interface HomeScreenItemProps {
+  app: AppItem;
+  onClick: (app: AppItem) => void;
+}
+
+const HomeScreenItem: React.FC<HomeScreenItemProps> = React.memo(({ app, onClick }) => {
+  return (
+    <button
+      onClick={() => onClick(app)}
+      className="flex flex-col items-center group active:scale-95 transition-transform focus:outline-none"
+    >
+      <div className={`relative w-[60px] h-[60px] rounded-[18px] flex items-center justify-center mb-1.5 overflow-hidden`}>
+        <AppIcon app={app} />
+        {app.isLocked && (
+          <div className="absolute inset-0 bg-black/25 flex items-center justify-center backdrop-blur-[1px]">
+            <Lock size={18} className="text-white drop-shadow-md" />
+          </div>
+        )}
+      </div>
+      <span className="text-[11px] font-medium text-gray-600 dark:text-gray-300 truncate w-full text-center leading-tight">{app.name}</span>
+    </button>
+  );
+});
+
+export default React.memo(HomeScreen);

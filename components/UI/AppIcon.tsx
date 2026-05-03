@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppItem } from '../../types';
 import { Smartphone, Facebook, Instagram, Twitter, MessageCircle, Chrome, Camera, Mail, Map } from 'lucide-react';
-import { getCachedIcon } from '../../utils/iconCache';
+import { getCachedIcon, subscribeToIconUpdates } from '../../utils/iconCache';
 
 interface AppIconProps {
     app: AppItem;
@@ -15,32 +15,25 @@ const AppIcon: React.FC<AppIconProps> = ({ app, className = "w-full h-full objec
         return getCachedIcon(app.packageName);
     });
 
-    // Poll the cache briefly if no icon yet — batch prefetcher populates it
     useEffect(() => {
+        // If we already have the icon data, no need to subscribe
         if (iconData || app.icon === 'DEEP_LINK') return;
 
-        // Check immediately — cache may already be populated
+        // Check cache immediately (in case it was updated between initial state and effect)
         const cached = getCachedIcon(app.packageName);
         if (cached) {
             setIconData(cached);
             return;
         }
 
-        // Poll every 200ms for up to 10s waiting for the prefetcher
-        let attempts = 0;
-        const maxAttempts = 50;
-        const interval = setInterval(() => {
-            attempts++;
-            const icon = getCachedIcon(app.packageName);
-            if (icon) {
+        // Subscribe to cache updates
+        const unsubscribe = subscribeToIconUpdates((pkg, icon) => {
+            if (pkg === app.packageName) {
                 setIconData(icon);
-                clearInterval(interval);
-            } else if (attempts >= maxAttempts) {
-                clearInterval(interval);
             }
-        }, 200);
+        });
 
-        return () => clearInterval(interval);
+        return () => unsubscribe();
     }, [app.packageName, iconData, app.icon]);
 
     const renderFallbackIcon = () => {

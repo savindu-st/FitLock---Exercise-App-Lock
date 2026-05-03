@@ -14,6 +14,10 @@ const memoryCache = new Map<string, string>();
 // Track in-flight requests to avoid duplicate native calls
 const pendingRequests = new Map<string, Promise<string>>();
 
+// Listeners for icon updates
+type IconListener = (packageName: string, iconUrl: string) => void;
+const listeners = new Set<IconListener>();
+
 // --- localStorage persistence ---
 
 const loadCacheFromStorage = (): void => {
@@ -62,7 +66,14 @@ export const setCachedIcon = (packageName: string, iconUrl: string): void => {
     if (iconUrl) {
         memoryCache.set(packageName, iconUrl);
         debouncedSave();
+        // Notify listeners
+        listeners.forEach(l => l(packageName, iconUrl));
     }
+};
+
+export const subscribeToIconUpdates = (listener: IconListener): (() => void) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
 };
 
 /**
