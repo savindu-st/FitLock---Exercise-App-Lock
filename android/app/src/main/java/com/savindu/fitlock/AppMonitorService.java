@@ -40,11 +40,41 @@ public class AppMonitorService extends Service {
     private String lastForegroundPackage = "";
     private boolean isRunning = false;
 
+    // Cache for locked apps to avoid JSON parsing in the polling loop
+    private Set<String> lockedPackagesCache = new HashSet<>();
+    private SharedPreferences.OnSharedPreferenceChangeListener prefsListener;
+
     @Override
     public void onCreate() {
         super.onCreate();
         handler = new Handler(Looper.getMainLooper());
         createNotificationChannel();
+        
+        // Initialize cache and listener
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        updateLockedAppsCache(prefs);
+        
+        prefsListener = (sharedPreferences, key) -> {
+            if (KEY_LOCKED_APPS.equals(key)) {
+                updateLockedAppsCache(sharedPreferences);
+            }
+        };
+        prefs.registerOnSharedPreferenceChangeListener(prefsListener);
+    }
+
+    private void updateLockedAppsCache(SharedPreferences prefs) {
+        try {
+            String json = prefs.getString(KEY_LOCKED_APPS, "[]");
+            JSONArray apps = new JSONArray(json);
+            Set<String> newCache = new HashSet<>();
+            for (int i = 0; i < apps.length(); i++) {
+                newCache.add(apps.getJSONObject(i).getString("packageName"));
+            }
+            lockedPackagesCache = newCache;
+            Log.d(TAG, "Locked apps cache updated: " + lockedPackagesCache.size() + " apps");
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating locked apps cache", e);
+        }
     }
 
     @Override
@@ -138,14 +168,14 @@ public class AppMonitorService extends Service {
 
         // Automatically relock apps if we switch away from a temporarily unlocked app
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        Set<String> tempUnlocked = new HashSet<>(prefs.getStringSet(KEY_TEMP_UNLOCKED, new HashSet<>()));
+        Set<String> tempUnlocked = prefs.getStringSet(KEY_TEMP_UNLOCKED, new HashSet<>());
         if (!tempUnlocked.isEmpty() && !tempUnlocked.contains(packageName)) {
             Log.d(TAG, "User switched away from unlocked app. Clearing temporary unlocks.");
             prefs.edit().putStringSet(KEY_TEMP_UNLOCKED, new HashSet<>()).apply();
         }
 
-        // Check if the app is locked
-        if (!isAppLocked(packageName))
+        // Check if the app is locked using cache (fast)
+        if (!lockedPackagesCache.contains(packageName))
             return;
 
         // Check if temporarily unlocked
@@ -164,20 +194,7 @@ public class AppMonitorService extends Service {
     }
 
     private boolean isAppLocked(String packageName) {
-        try {
-            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-            String json = prefs.getString(KEY_LOCKED_APPS, "[]");
-            JSONArray apps = new JSONArray(json);
-            for (int i = 0; i < apps.length(); i++) {
-                JSONObject app = apps.getJSONObject(i);
-                if (app.getString("packageName").equals(packageName)) {
-                    return true;
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error checking locked apps", e);
-        }
-        return false;
+        return lockedPackagesCache.contains(packageName);
     }
 
     private String getLockedAppName(String packageName) {
