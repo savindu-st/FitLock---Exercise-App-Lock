@@ -14,6 +14,8 @@ interface PermissionsPluginInterface {
     requestCameraPermission(): Promise<void>;
     checkNotificationPermission(): Promise<{ granted: boolean }>;
     requestNotificationPermission(): Promise<void>;
+    checkBatteryOptimizationPermission(): Promise<{ granted: boolean }>;
+    requestBatteryOptimizationPermission(): Promise<void>;
     openAppSettings(): Promise<void>;
 }
 
@@ -100,6 +102,25 @@ const PermissionsScreen: React.FC<PermissionsScreenProps> = ({ onBack }) => {
             },
             request: async () => {
                 try { await PermissionsNative.requestCameraPermission(); } catch { }
+            },
+        },
+        {
+            id: 'battery',
+            title: 'Battery Optimization',
+            description: 'Crucial to prevent Android from killing FitLock in the background. Ensuring the lock works every time.',
+            icon: ShieldCheck,
+            iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
+            iconColor: 'text-indigo-600 dark:text-indigo-400',
+            granted: false,
+            critical: true,
+            check: async () => {
+                try {
+                    const r = await PermissionsNative.checkBatteryOptimizationPermission();
+                    return r.granted;
+                } catch { return false; }
+            },
+            request: async () => {
+                try { await PermissionsNative.requestBatteryOptimizationPermission(); } catch { }
             },
         },
         {

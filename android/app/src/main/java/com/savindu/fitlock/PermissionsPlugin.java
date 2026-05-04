@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
 import android.provider.Settings;
 
 import androidx.core.app.ActivityCompat;
@@ -121,6 +122,33 @@ public class PermissionsPlugin extends Plugin {
             call.resolve();
         } catch (Exception e) {
             call.reject("Failed to request notification permission: " + e.getMessage());
+        }
+    }
+
+    // ── Battery Optimization ───────────────────────────────────────
+
+    @PluginMethod
+    public void checkBatteryOptimizationPermission(PluginCall call) {
+        JSObject result = new JSObject();
+        PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        if (pm != null) {
+            result.put("granted", pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
+        } else {
+            result.put("granted", true);
+        }
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void requestBatteryOptimizationPermission(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Failed to request battery optimization exemption: " + e.getMessage());
         }
     }
 
