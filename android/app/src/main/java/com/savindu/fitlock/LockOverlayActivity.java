@@ -20,6 +20,20 @@ public class LockOverlayActivity extends Activity {
 
         // Get extras from intent
         Intent intent = getIntent();
+        updateFromIntent(intent);
+
+        setupUI();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        updateFromIntent(intent);
+        setupUI();
+    }
+
+    private void updateFromIntent(Intent intent) {
         if (intent != null) {
             lockedPackage = intent.getStringExtra("locked_package");
             lockedAppName = intent.getStringExtra("locked_app_name");
@@ -29,7 +43,9 @@ public class LockOverlayActivity extends Activity {
             if (lockedAppName == null)
                 lockedAppName = "App";
         }
+    }
 
+    private void setupUI() {
         // Set up UI
         TextView titleText = findViewById(R.id.lockTitle);
         TextView subtitleText = findViewById(R.id.lockSubtitle);

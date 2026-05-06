@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.app.usage.UsageEvents;
+import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
@@ -23,6 +24,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class AppMonitorService extends Service {
@@ -123,9 +125,16 @@ public class AppMonitorService extends Service {
                     return;
 
                 String foregroundPkg = getForegroundPackage();
-                if (foregroundPkg != null && !foregroundPkg.equals(lastForegroundPackage)) {
-                    lastForegroundPackage = foregroundPkg;
-                    onForegroundAppChanged(foregroundPkg);
+                if (foregroundPkg != null) {
+                    if (!foregroundPkg.equals(lastForegroundPackage)) {
+                        Log.d(TAG, "Foreground app changed: " + lastForegroundPackage + " -> " + foregroundPkg);
+                        lastForegroundPackage = foregroundPkg;
+                        onForegroundAppChanged(foregroundPkg);
+                    }
+                } else {
+                    // Reset if no app detected in the window - this ensures we catch re-entry
+                    // into the same app if the transition was missed.
+                    lastForegroundPackage = "";
                 }
 
                 handler.postDelayed(this, POLL_INTERVAL_MS);
@@ -141,19 +150,42 @@ public class AppMonitorService extends Service {
                 return null;
 
             long now = System.currentTimeMillis();
-            // Query usage events for the last 5 seconds
-            UsageEvents events = usm.queryEvents(now - 5000, now);
+            // Query usage events for the last 10 seconds (increased from 5 for robustness)
+            UsageEvents events = usm.queryEvents(now - 10000, now);
             if (events == null)
                 return null;
 
             String lastApp = null;
+            UsageEvents.Event event = new UsageEvents.Event();
             while (events.hasNextEvent()) {
-                UsageEvents.Event event = new UsageEvents.Event();
                 events.getNextEvent(event);
                 if (event.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED) {
                     lastApp = event.getPackageName();
+                } else if (event.getEventType() == UsageEvents.Event.ACTIVITY_PAUSED || 
+                           event.getEventType() == UsageEvents.Event.ACTIVITY_STOPPED) {
+                    if (event.getPackageName().equals(lastApp)) {
+                        lastApp = null;
+                    }
                 }
             }
+            
+            // Fallback: If queryEvents is empty or inconclusive, use queryUsageStats
+            if (lastApp == null) {
+                List<UsageStats> stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, now - 1000 * 60, now);
+                if (stats != null && !stats.isEmpty()) {
+                    UsageStats bestStat = null;
+                    for (UsageStats s : stats) {
+                        if (bestStat == null || s.getLastTimeUsed() > bestStat.getLastTimeUsed()) {
+                            bestStat = s;
+                        }
+                    }
+                    // Only use it if it was used very recently (last 5 seconds)
+                    if (bestStat != null && (now - bestStat.getLastTimeUsed()) < 5000) {
+                        lastApp = bestStat.getPackageName();
+                    }
+                }
+            }
+            
             return lastApp;
         } catch (Exception e) {
             Log.e(TAG, "Error getting foreground package", e);
