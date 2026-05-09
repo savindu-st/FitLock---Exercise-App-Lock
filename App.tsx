@@ -45,10 +45,11 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 import { useSubscription } from './components/Context/SubscriptionContext';
-import { AdMob, BannerAdSize, BannerAdPosition } from '@capacitor-community/admob';
+import { AdMob, BannerAdSize, BannerAdPosition, BannerAdPluginEvents } from '@capacitor-community/admob';
 
 const App: React.FC = () => {
   const { isPremium } = useSubscription();
+  const [adInitialized, setAdInitialized] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<ScreenName>(
     !isOnboardingCompleted() ? ScreenName.ONBOARDING : (isCameraPermissionAsked() ? ScreenName.HOME : ScreenName.CAMERA_PERMISSION)
   );
@@ -136,59 +137,130 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // AdMob initialization
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      const initAdMob = async () => {
+        try {
+          // Check/Request tracking authorization
+          await AdMob.trackingAuthorizationStatus();
+          
+          await AdMob.initialize();
+          console.log('[FitLock] AdMob Initialized');
+          setAdInitialized(true);
+        } catch (err) {
+          console.warn('AdMob Init Error:', err);
+        }
+      };
+      
+      initAdMob();
+
+      // Add listeners for debugging
+      const loadedSub = AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
+        console.log('[FitLock] AdMob: Banner Loaded');
+      });
+
+      const failedSub = AdMob.addListener(BannerAdPluginEvents.FailedToLoad, (info) => {
+        console.warn('[FitLock] AdMob: Banner Failed to Load', info);
+      });
+
+      const openedSub = AdMob.addListener(BannerAdPluginEvents.Opened, () => {
+        console.log('[FitLock] AdMob: Banner Opened');
+      });
+
+      const closedSub = AdMob.addListener(BannerAdPluginEvents.Closed, () => {
+        console.log('[FitLock] AdMob: Banner Closed');
+      });
+
+      return () => {
+        loadedSub.remove();
+        failedSub.remove();
+        openedSub.remove();
+        closedSub.remove();
+      };
+    }
+  }, []);
+
   // AdMob Banner setup
   const isFullScreen = currentScreen === ScreenName.LOCK_CHALLENGE || 
                        currentScreen === ScreenName.CAMERA_PERMISSION || 
                        currentScreen === ScreenName.ONBOARDING ||
                        currentScreen === ScreenName.APP_CONTENT;
 
+  // Track banner state to prevent duplicate requests and improve resilience
+  const adRequestPendingRef = useRef(false);
+  const bannerExistsRef = useRef(false);
+
   useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !adInitialized) return;
+    
     let mounted = true;
 
     const setupAds = async () => {
-      try {
-        await AdMob.initialize();
-      } catch (err) {
-        console.warn('AdMob Init Error:', err);
-      }
-
       if (isPremium || isFullScreen) {
         try {
-          await AdMob.hideBanner();
-          await AdMob.removeBanner();
+          if (bannerExistsRef.current) {
+            await AdMob.hideBanner();
+            console.log('[FitLock] AdMob: Banner Hidden');
+          }
         } catch (e) { }
         return;
       }
 
-      if (!mounted) return;
+      // If we already have a banner, just ensure it's shown
+      if (bannerExistsRef.current) {
+        try {
+          await AdMob.showBanner({
+            adId: import.meta.env.VITE_ADMOB_BANNER_ID || 'ca-app-pub-3940256099942544/6300978111', 
+            adSize: BannerAdSize.ADAPTIVE_BANNER,
+            position: BannerAdPosition.BOTTOM_CENTER,
+            margin: 110, 
+            isTesting: !import.meta.env.VITE_ADMOB_BANNER_ID
+          });
+          console.log('[FitLock] AdMob: Banner Resumed');
+          return;
+        } catch (e) {
+          bannerExistsRef.current = false;
+        }
+      }
+
+      if (!mounted || adRequestPendingRef.current) return;
 
       try {
-        // Ensure any existing banner is removed before showing a new one
-        // This ensures Native Android plugin creates it afresh with the new margin
-        try {
-          await AdMob.hideBanner();
-          await AdMob.removeBanner();
-        } catch (e) { }
-
-        if (!mounted) return;
-
+        adRequestPendingRef.current = true;
+        
+        console.log('[FitLock] Attempting to create adaptive banner...');
         await AdMob.showBanner({
-          adId: import.meta.env.VITE_ADMOB_BANNER_ID || '', // Test Banner ID
-          adSize: BannerAdSize.BANNER,
+          adId: import.meta.env.VITE_ADMOB_BANNER_ID || 'ca-app-pub-3940256099942544/6300978111', 
+          adSize: BannerAdSize.ADAPTIVE_BANNER,
           position: BannerAdPosition.BOTTOM_CENTER,
-          margin: isFullScreen ? 0 : 70, // this should realistically be always 70 here since isFullScreen is already returned
+          margin: 110, 
+          isTesting: !import.meta.env.VITE_ADMOB_BANNER_ID
         });
+        
+        bannerExistsRef.current = true;
       } catch (err) {
-        console.warn('AdMob Error:', err);
+        console.warn('[FitLock] AdMob Show Error:', err);
+      } finally {
+        adRequestPendingRef.current = false;
       }
     };
 
     setupAds();
 
+    // Re-trigger ad setup when app returns from background
+    const appStateSub = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive && mounted) {
+        console.log('[FitLock] App Foregrounded: Checking Ads...');
+        setupAds();
+      }
+    });
+
     return () => {
       mounted = false;
+      appStateSub.then(s => s.remove());
     };
-  }, [isPremium, isFullScreen]);
+  }, [isPremium, isFullScreen, adInitialized]);
 
   useEffect(() => {
     targetAppRef.current = targetApp;
@@ -201,7 +273,7 @@ const App: React.FC = () => {
       const platform = Capacitor.getPlatform();
 
       if (platform === 'ios') {
-        await Purchases.configure({ apiKey: import.meta.env.VITE_REVENUECAT_IOS_KEY || "" }); // Update this if you ever publish to iOS
+        await Purchases.configure({ apiKey: import.meta.env.VITE_REVENUECAT_IOS_KEY || "" }); 
       } else if (platform === 'android') {
         await Purchases.configure({ apiKey: import.meta.env.VITE_REVENUECAT_ANDROID_KEY || "" });
       }
@@ -214,7 +286,6 @@ const App: React.FC = () => {
     const fetchApps = async () => {
       const savedApps = loadApps() || [];
       
-      // Optimistic UI: Immediately show saved apps if they exist
       if (savedApps.length > 0) {
         setApps(savedApps);
         setIsLoadingApps(false);
@@ -226,7 +297,6 @@ const App: React.FC = () => {
         const response = await InstalledApps.getApps() as any;
         const applications = response?.apps || [];
 
-        // Merge real apps with saved settings
         let mergedApps: AppItem[] = applications.map((app: any) => {
           const pkgName = app.packageName || '';
           const saved = savedApps.find((s: AppItem) => s.packageName === pkgName);
@@ -241,7 +311,6 @@ const App: React.FC = () => {
           };
         });
 
-        // Filter out essential system apps to prevent soft-bricks or emergency blockages
         mergedApps = mergedApps.filter(app => {
           const pkg = app.packageName.toLowerCase();
           const appName = app.name.toLowerCase().trim();
@@ -259,21 +328,17 @@ const App: React.FC = () => {
           );
         });
 
-        // Sort apps alphabetically by name
         mergedApps.sort((a, b) => a.name.localeCompare(b.name));
 
         setApps(mergedApps);
         setIsLoadingApps(false);
 
-        // Prefetch icons in the background — UI shows instantly with fallback icons
-        // Icons load progressively and AppIcon picks them up from cache
         const packageNames = mergedApps.map(a => a.packageName);
         prefetchIcons(packageNames).catch(err =>
           console.warn('Icon prefetch error:', err)
         );
       } catch (err) {
         console.error('Failed to fetch installed apps:', err);
-        // Fallback to saved apps if native plugin fails (e.g. in browser)
         if (savedApps.length === 0) {
           setApps(loadApps() || []);
         }
@@ -285,11 +350,9 @@ const App: React.FC = () => {
     fetchApps();
   }, []);
 
-  // Auto-save apps and history to localStorage
   useEffect(() => { saveApps(apps); }, [apps]);
   useEffect(() => { saveHistory(history); }, [history]);
 
-  // Sync locked apps to native SharedPreferences whenever apps change
   useEffect(() => {
     const syncLockedApps = async () => {
       try {
@@ -304,7 +367,6 @@ const App: React.FC = () => {
     if (apps.length > 0) syncLockedApps();
   }, [apps]);
 
-  // Auto-start monitoring service on launch — no delay, service handles re-entry
   useEffect(() => {
     const startMonitoring = async () => {
       try {
@@ -317,14 +379,10 @@ const App: React.FC = () => {
     startMonitoring();
   }, []);
 
-  // Preload MediaPipe Pose model in background so WASM + model files are cached
-  // This makes the LockScreen camera start much faster on first use
   useEffect(() => {
     const preloadPoseModel = async () => {
       try {
-        // Wait for CDN script to be available
         if (!(window as any).Pose) {
-          // Script not loaded yet, wait briefly
           await new Promise<void>((resolve) => {
             const check = setInterval(() => {
               if ((window as any).Pose) {
@@ -332,7 +390,6 @@ const App: React.FC = () => {
                 resolve();
               }
             }, 200);
-            // Give up after 10 seconds
             setTimeout(() => { clearInterval(check); resolve(); }, 10000);
           });
         }
@@ -349,7 +406,6 @@ const App: React.FC = () => {
           minDetectionConfidence: 0.5,
           minTrackingConfidence: 0.5,
         });
-        // initialize() downloads and compiles the WASM + model, caching them
         await warmupPose.initialize();
         warmupPose.close();
         console.log('[FitLock] Pose model preloaded and cached.');
@@ -360,18 +416,16 @@ const App: React.FC = () => {
     preloadPoseModel();
   }, []);
 
-  // Poll for deep-linked challenges from native
   useEffect(() => {
     const checkPendingChallenge = async () => {
       try {
         const result = await AppLockService.getPendingChallenge();
         if (result.hasChallenge && result.action === 'lock_challenge') {
-          // A challenge was initiated natively via the lock overlay 
           setTargetApp({
             id: result.locked_package || '',
             name: result.locked_app_name || 'App',
             packageName: result.locked_package || '',
-            icon: 'DEEP_LINK', // Use a specific marker to identify deep links
+            icon: 'DEEP_LINK', 
             iconColor: 'bg-blue-500',
             isLocked: true,
             requiredReps: result.required_reps || 5
@@ -383,10 +437,8 @@ const App: React.FC = () => {
       }
     };
 
-    // Check on mount
     checkPendingChallenge();
 
-    // Check whenever app resumes
     const sub = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
       if (isActive) checkPendingChallenge();
     });
@@ -394,38 +446,32 @@ const App: React.FC = () => {
     return () => { sub.then(s => s.remove()); };
   }, []);
 
-  // Handle native Android back button
   useEffect(() => {
     const backButtonSub = CapacitorApp.addListener('backButton', () => {
       const screen = currentScreenRef.current;
 
       if (screen === ScreenName.HOME) {
-        // Double press to exit if on Home
         setBackPressCount(prevCount => {
           const newCount = prevCount + 1;
           if (newCount >= 2) {
             CapacitorApp.exitApp();
             return 0;
           }
-          // Reset count after 2 seconds
           setTimeout(() => setBackPressCount(0), 2000);
           return newCount;
         });
       } else if (screen === ScreenName.LOCK_CHALLENGE) {
         const tgtApp = targetAppRef.current;
         if (tgtApp && tgtApp.icon === 'DEEP_LINK') {
-          // If we're deep-linked over an app, cancelling should dump us back to home, not FitLock Home
           AppLockService.exitToApp({ packageName: '' }).catch(console.warn);
         } else {
           setTargetApp(null);
           setCurrentScreen(ScreenName.HOME);
         }
       } else if (screen === ScreenName.CAMERA_PERMISSION) {
-        // Do nothing to avoid bypassing
       } else if (screen === ScreenName.LEGAL_INFO) {
         setCurrentScreen(ScreenName.PROFILE);
       } else {
-        // For Settings, History, Profile, etc.
         setCurrentScreen(ScreenName.HOME);
       }
     });
@@ -433,18 +479,15 @@ const App: React.FC = () => {
     return () => { backButtonSub.then(s => s.remove()); };
   }, []);
 
-  // Initial permission check and skip onboarding if already granted
   useEffect(() => {
     const checkInitialPermission = async () => {
       let isGranted = false;
 
-      // Layer 1: Permissions API
       try {
         if ('permissions' in navigator) {
           const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
           if (result.state === 'granted') isGranted = true;
 
-          // Listen for permission changes
           result.onchange = () => {
             const newState = result.state === 'granted';
             setCameraGranted(newState);
@@ -455,8 +498,6 @@ const App: React.FC = () => {
         console.warn('Permissions API check failed:', err);
       }
 
-      // Layer 2: Device Enumeration (more reliable in some WebViews)
-      // If we have labels, we definitely have permission
       try {
         if (!isGranted && 'mediaDevices' in navigator && 'enumerateDevices' in navigator.mediaDevices) {
           const devices = await navigator.mediaDevices.enumerateDevices();
@@ -467,7 +508,6 @@ const App: React.FC = () => {
         console.warn('enumerateDevices check failed:', err);
       }
 
-      // If either check passed, or we previously asked and it was granted
       if (isGranted || isCameraPermissionAsked()) {
         setCameraGranted(true);
         if (!isCameraPermissionAsked()) setCameraPermissionAsked();
@@ -481,23 +521,19 @@ const App: React.FC = () => {
   }, []);
 
   const checkCameraPermission = async (): Promise<boolean> => {
-    // Return early if we already have a confirmed granted state
     if (cameraGranted === true) return true;
 
     try {
-      // 1. Check Permissions API
       if ('permissions' in navigator) {
         const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
         if (result.state === 'granted') return true;
       }
 
-      // 2. Check enumerateDevices (if we have labels, we have permission)
       if ('mediaDevices' in navigator && 'enumerateDevices' in navigator.mediaDevices) {
         const devices = await navigator.mediaDevices.enumerateDevices();
         if (devices.some(device => device.kind === 'videoinput' && device.label)) return true;
       }
 
-      // 3. Fallback to localStorage flag
       return isCameraPermissionAsked();
     } catch {
       return isCameraPermissionAsked();
@@ -506,11 +542,8 @@ const App: React.FC = () => {
 
   const handleAppClick = useCallback(async (app: AppItem) => {
     if (app.isLocked) {
-      // Check camera permission before going to lock challenge
-      // Use permissions API check first, then fallback to local state
       const hasCamera = cameraGranted ?? (await checkCameraPermission());
       if (!hasCamera) {
-        // Camera not available — show permission screen, then go to lock after
         setPendingLockApp(app);
         setCurrentScreen(ScreenName.CAMERA_PERMISSION);
       } else {
@@ -518,7 +551,6 @@ const App: React.FC = () => {
         setCurrentScreen(ScreenName.LOCK_CHALLENGE);
       }
     } else {
-      // Launch the app directly via native plugin
       AppLockService.exitToApp({ packageName: app.packageName }).catch(err => console.warn('Failed to launch app:', err));
     }
   }, [cameraGranted]);
@@ -541,23 +573,18 @@ const App: React.FC = () => {
         };
         setHistory(prev => [newItem, ...prev]);
 
-        // Temporarily unlock the app in native service so it doesn't re-trigger
         AppLockService.addTempUnlock({ packageName: prevTarget.packageName })
           .then(() => {
-            // Instantly launch the locked app and background FitLock
             return AppLockService.exitToApp({ packageName: prevTarget.packageName });
           })
           .catch(err => console.warn('Failed to add temp unlock or exit:', err));
       }
       return null;
     });
-    // Immediately clear LockScreen so WebGL and Camera are released before going to background
     setCurrentScreen(ScreenName.HOME);
   }, []);
 
   const handleCancelLock = useCallback(() => {
-    // If we're deep-linked over an app, cancelling should dump us back to home, not FitLock Home
-    // We do this by passing empty packageName to just push FitLock to the background
     if (targetApp && targetApp.icon === 'DEEP_LINK') {
       AppLockService.exitToApp({ packageName: '' }).catch(console.warn);
     } else {
@@ -574,7 +601,6 @@ const App: React.FC = () => {
   const handleCameraPermissionDone = useCallback(() => {
     setCameraPermissionAsked();
     setCameraGranted(true);
-    // If there's a pending locked app, go directly to the lock challenge
     if (pendingLockApp) {
       setTargetApp(pendingLockApp);
       setPendingLockApp(null);
@@ -685,12 +711,10 @@ const App: React.FC = () => {
     }
   };
 
-  // Camera Permission screen is full-screen, rendered outside the layout
   if (currentScreen === ScreenName.CAMERA_PERMISSION) {
     return <CameraPermissionScreen onPermissionGranted={handleCameraPermissionDone} onSkip={handleCameraPermissionDone} />;
   }
 
-  // Onboarding screen is full-screen
   if (currentScreen === ScreenName.ONBOARDING) {
     return (
       <OnboardingScreen 
@@ -702,7 +726,6 @@ const App: React.FC = () => {
     );
   }
 
-  // If we are in Lock Challenge, we want a Full Screen experience (no App Bar, No Bottom Nav)
   if (currentScreen === ScreenName.LOCK_CHALLENGE && targetApp) {
     return (
       <div className="min-h-screen w-full bg-black relative flex flex-col">
@@ -711,7 +734,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Determine title based on screen
   const getTitle = () => {
     switch (currentScreen) {
       case ScreenName.SETTINGS: return "App Lock";

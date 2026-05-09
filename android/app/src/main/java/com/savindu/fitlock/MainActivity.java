@@ -6,6 +6,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.community.admob.AdMob;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -22,6 +23,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(InstalledAppsPlugin.class);
         registerPlugin(PermissionsPlugin.class);
         registerPlugin(AppLockServicePlugin.class);
+        registerPlugin(AdMob.class);
 
         super.onCreate(savedInstanceState);
 
@@ -32,13 +34,11 @@ public class MainActivity extends BridgeActivity {
         }
 
         // Get the WebView and inject the system navigation bar height as a CSS variable
-        // This is needed because targetSdk 35+ enforces edge-to-edge and
-        // env(safe-area-inset-bottom) doesn't work in Android WebView
         getBridge().getWebView().post(() -> {
             ViewCompat.setOnApplyWindowInsetsListener(getBridge().getWebView(), (v, windowInsets) -> {
                 Insets navBarInsets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
 
-                // Convert physical pixels to CSS dp (density-independent pixels)
+                // Convert physical pixels to CSS dp
                 float density = getResources().getDisplayMetrics().density;
                 int bottomDp = Math.round(navBarInsets.bottom / density);
                 int topDp = Math.round(navBarInsets.top / density);
