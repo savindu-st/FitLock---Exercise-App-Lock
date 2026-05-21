@@ -81,6 +81,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
   useEffect(() => {
     let camera: any = null;
     let pose: any = null;
+    let active = true;
 
     const onResults = (results: any) => {
       setLoading(false);
@@ -300,7 +301,6 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
     };
 
     let pollInterval: ReturnType<typeof setInterval> | null = null;
-
     const initMediaPipe = async () => {
       try {
         if (!videoRef.current) {
@@ -346,8 +346,16 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
           const [cameraStream] = await Promise.all([cameraPromise, posePromise]);
           stream = cameraStream;
         } catch (err: any) {
+          if (!active) {
+            // If already unmounted, check if stream was somehow allocated
+            try {
+              const s = await cameraPromise;
+              s.getTracks().forEach(t => t.stop());
+            } catch {}
+            return;
+          }
           // Determine which one failed
-          if (err?.name === 'NotAllowedError' || err?.name === 'NotFoundError' || err?.message?.includes('permission')) {
+          if (err?.name === 'NotAllowedError' || err?.message?.includes('permission')) {
             setCameraError(`Camera access denied: ${err?.message || 'Unknown'}. Please grant camera permission.`);
           } else {
             setCameraError(`Initialization failed: ${err?.message || 'Unknown error'}`);
@@ -355,9 +363,21 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
           return;
         }
 
+        if (!active) {
+          console.log('[FitLock] Unmounted during camera/pose init. Cleaning up immediately.');
+          if (stream) stream.getTracks().forEach(t => t.stop());
+          if (pose) { try { pose.close(); } catch {} }
+          return;
+        }
+
         // Assign stream and wait for video to have pixel data
         console.log('[FitLock] Waiting for video data...');
-        const video = videoRef.current!;
+        const video = videoRef.current;
+        if (!video) {
+          if (stream) stream.getTracks().forEach(t => t.stop());
+          if (pose) { try { pose.close(); } catch {} }
+          return;
+        }
         video.srcObject = stream;
 
         await new Promise<void>((resolve, reject) => {
@@ -373,6 +393,13 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
           video.play().catch(reject);
         });
 
+        if (!active) {
+          console.log('[FitLock] Unmounted during video ready wait. Cleaning up immediately.');
+          if (stream) stream.getTracks().forEach(t => t.stop());
+          if (pose) { try { pose.close(); } catch {} }
+          return;
+        }
+
         console.log('[FitLock] Video ready, size:', video.videoWidth, 'x', video.videoHeight);
 
         // Send first frame to warm up the pipeline
@@ -383,8 +410,19 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
         } catch (e) {
           console.warn('[FitLock] First frame failed, retrying...', e);
           await new Promise(r => setTimeout(r, 500));
+          if (!active) {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            if (pose) { try { pose.close(); } catch {} }
+            return;
+          }
           await pose.send({ image: video });
           console.log('[FitLock] Retry succeeded.');
+        }
+
+        if (!active) {
+          if (stream) stream.getTracks().forEach(t => t.stop());
+          if (pose) { try { pose.close(); } catch {} }
+          return;
         }
 
         // Non-blocking frame loop: skip frames while pose is still processing
@@ -392,7 +430,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
         let running = true;
         let processing = false;
         const processFrame = () => {
-          if (!running || !videoRef.current || !pose) return;
+          if (!active || !running || !videoRef.current || !pose) return;
           if (!processing) {
             processing = true;
             pose.send({ image: videoRef.current }).then(() => {
@@ -402,7 +440,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
               console.error('[FitLock] Frame error:', e);
             });
           }
-          if (running) {
+          if (running && active) {
             requestAnimationFrame(processFrame);
           }
         };
@@ -419,7 +457,9 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
 
       } catch (err: any) {
         console.error('[FitLock] initMediaPipe FATAL:', err);
-        setCameraError(`Camera failed: ${err?.message || 'Unknown error'}`);
+        if (active) {
+          setCameraError(`Camera failed: ${err?.message || 'Unknown error'}`);
+        }
       }
     };
 
@@ -453,6 +493,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
     }
 
     return () => {
+      active = false;
       try {
         clearTimeout(timeoutId);
         clearInterval(pollInterval);

@@ -2,6 +2,7 @@ import { registerPlugin } from '@capacitor/core';
 
 interface InstalledAppsPlugin {
     getAppIcon(options: { packageName: string }): Promise<{ icon: string }>;
+    getAppIcons(options: { packageNames: string[] }): Promise<{ icons: Record<string, string> }>;
 }
 
 const InstalledApps = registerPlugin<InstalledAppsPlugin>('InstalledApps');
@@ -88,35 +89,66 @@ export const prefetchIcons = async (
     const uncached = packageNames.filter(pkg => !memoryCache.has(pkg));
     if (uncached.length === 0) return;
 
-    // Process in batches of 5 to keep the native bridge responsive
-    const BATCH_SIZE = 5;
-    for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
-        const batch = uncached.slice(i, i + BATCH_SIZE);
-        await Promise.all(
-            batch.map(async (pkg) => {
-                // Deduplicate — if someone else is already fetching, wait for that
-                if (pendingRequests.has(pkg)) {
-                    const icon = await pendingRequests.get(pkg)!;
-                    if (icon) onIconLoaded?.(pkg, icon);
-                    return;
+    // Deduplicate from ongoing requests
+    const toFetch = uncached.filter(pkg => !pendingRequests.has(pkg));
+
+    // For any already pending request, wait for it
+    uncached.forEach(async (pkg) => {
+        if (pendingRequests.has(pkg)) {
+            const icon = await pendingRequests.get(pkg);
+            if (icon) onIconLoaded?.(pkg, icon);
+        }
+    });
+
+    if (toFetch.length === 0) return;
+
+    // Process in larger batches of 20 using the native bulk API getAppIcons
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
+        const batch = toFetch.slice(i, i + BATCH_SIZE);
+        
+        // Setup promises for this batch to track ongoing requests in pendingRequests Map
+        const batchPromises: Record<string, (icon: string) => void> = {};
+        batch.forEach(pkg => {
+            const promise = new Promise<string>((resolve) => {
+                batchPromises[pkg] = resolve;
+            });
+            pendingRequests.set(pkg, promise);
+        });
+
+        try {
+            // Call bulk API on native side
+            const response = await InstalledApps.getAppIcons({ packageNames: batch });
+            const icons = response?.icons || {};
+            
+            // Resolve all promises and set icons
+            batch.forEach(pkg => {
+                const icon = icons[pkg] || '';
+                if (icon) {
+                    setCachedIcon(pkg, icon);
+                    onIconLoaded?.(pkg, icon);
                 }
-
-                const request = InstalledApps.getAppIcon({ packageName: pkg })
-                    .then(({ icon }) => {
-                        if (icon) {
-                            setCachedIcon(pkg, icon);
-                            onIconLoaded?.(pkg, icon);
-                        }
-                        return icon;
-                    })
-                    .catch(() => '')
-                    .finally(() => {
-                        pendingRequests.delete(pkg);
-                    });
-
-                pendingRequests.set(pkg, request);
-                await request;
-            })
-        );
+                // Clean from pending and resolve the promise
+                pendingRequests.delete(pkg);
+                batchPromises[pkg]?.(icon);
+            });
+        } catch (err) {
+            console.warn('Batch fetch failed, falling back to individual fetch', err);
+            // Fallback: fetch individually for this batch in case of error
+            await Promise.all(batch.map(async (pkg) => {
+                try {
+                    const { icon } = await InstalledApps.getAppIcon({ packageName: pkg });
+                    if (icon) {
+                        setCachedIcon(pkg, icon);
+                        onIconLoaded?.(pkg, icon);
+                    }
+                    pendingRequests.delete(pkg);
+                    batchPromises[pkg]?.(icon);
+                } catch {
+                    pendingRequests.delete(pkg);
+                    batchPromises[pkg]?.('');
+                }
+            }));
+        }
     }
 };

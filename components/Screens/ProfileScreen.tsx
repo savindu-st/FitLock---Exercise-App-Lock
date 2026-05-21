@@ -56,7 +56,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, currentTheme 
         </div>
 
         <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-8">
-          Version 1.0.4 (Build 2026.04.06)
+          Version 1.0.9 (Build 2026.05.21)
         </p>
       </div>
     </div>
