@@ -13,10 +13,6 @@ interface HomeScreenProps {
 const HomeScreen: React.FC<HomeScreenProps> = ({ apps, onAppClick, allPermissionsGranted, onRequirePermissions }) => {
   return (
     <div className="px-4 pt-4 pb-2">
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">My Apps</h2>
-        <p className="text-gray-400 dark:text-gray-500 text-xs">Select an app to open</p>
-      </div>
 
       <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-y-6 gap-x-4">
         {apps.map((app) => (

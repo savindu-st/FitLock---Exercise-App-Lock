@@ -19,12 +19,12 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ history }) => {
 
   if (history.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-500 dark:text-gray-400 pb-20">
+      <div className="flex flex-col items-center justify-center min-h-[65vh] p-8 text-center text-gray-500 dark:text-gray-400">
         <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
           <Clock size={40} className="text-gray-300 dark:text-gray-600" />
         </div>
         <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">No Activity Yet</h3>
-        <p className="text-sm">Complete workout challenges to unlock apps and see your history here.</p>
+        <p className="text-sm max-w-sm">Complete workout challenges to unlock apps and see your history here.</p>
       </div>
     );
   }
