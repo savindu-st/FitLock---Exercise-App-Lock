@@ -127,9 +127,10 @@ public class AppMonitorService extends Service {
                 String foregroundPkg = getForegroundPackage();
                 if (foregroundPkg != null) {
                     if (!foregroundPkg.equals(lastForegroundPackage)) {
-                        Log.d(TAG, "Foreground app changed: " + lastForegroundPackage + " -> " + foregroundPkg);
+                        String prevPkg = lastForegroundPackage;
+                        Log.d(TAG, "Foreground app changed: " + prevPkg + " -> " + foregroundPkg);
                         lastForegroundPackage = foregroundPkg;
-                        onForegroundAppChanged(foregroundPkg);
+                        onForegroundAppChanged(foregroundPkg, prevPkg);
                     }
                 } else {
                     // Reset if no app detected in the window - this ensures we catch re-entry
@@ -193,17 +194,28 @@ public class AppMonitorService extends Service {
         }
     }
 
-    private void onForegroundAppChanged(String packageName) {
+    private static final String KEY_UNLOCKED_EXPIRATIONS = "temp_unlocked_expirations";
+    private static final long GRACE_PERIOD_MS = 5 * 60 * 1000; // 5 minutes
+
+    private void onForegroundAppChanged(String packageName, String prevPackage) {
         // Don't block ourselves
         if (packageName.equals(getPackageName()))
             return;
 
-        // Automatically relock apps if we switch away from a temporarily unlocked app
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        Set<String> tempUnlocked = prefs.getStringSet(KEY_TEMP_UNLOCKED, new HashSet<>());
-        if (!tempUnlocked.isEmpty() && !tempUnlocked.contains(packageName)) {
-            Log.d(TAG, "User switched away from unlocked app. Clearing temporary unlocks.");
-            prefs.edit().putStringSet(KEY_TEMP_UNLOCKED, new HashSet<>()).apply();
+        Set<String> tempUnlocked = new HashSet<>(prefs.getStringSet(KEY_TEMP_UNLOCKED, new HashSet<>()));
+
+        // If user switched away from a temporarily unlocked app, start its grace period timer
+        if (prevPackage != null && tempUnlocked.contains(prevPackage) && !prevPackage.equals(getPackageName())) {
+            try {
+                String expirationsJson = prefs.getString(KEY_UNLOCKED_EXPIRATIONS, "{}");
+                JSONObject expirations = new JSONObject(expirationsJson);
+                expirations.put(prevPackage, System.currentTimeMillis() + GRACE_PERIOD_MS);
+                prefs.edit().putString(KEY_UNLOCKED_EXPIRATIONS, expirations.toString()).apply();
+                Log.d(TAG, "Started 5-minute grace period for " + prevPackage);
+            } catch (Exception e) {
+                Log.e(TAG, "Error setting grace period", e);
+            }
         }
 
         // Check if the app is locked using cache (fast)
@@ -211,18 +223,50 @@ public class AppMonitorService extends Service {
             return;
 
         // Check if temporarily unlocked
-        if (isTempUnlocked(packageName))
-            return;
+        if (tempUnlocked.contains(packageName)) {
+            try {
+                String expirationsJson = prefs.getString(KEY_UNLOCKED_EXPIRATIONS, "{}");
+                JSONObject expirations = new JSONObject(expirationsJson);
+                if (expirations.has(packageName)) {
+                    long expiryTime = expirations.getLong(packageName);
+                    if (System.currentTimeMillis() > expiryTime) {
+                        // Grace period expired! Remove from unlocked set
+                        Log.d(TAG, "Grace period expired for " + packageName);
+                        tempUnlocked.remove(packageName);
+                        expirations.remove(packageName);
+                        
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.putStringSet(KEY_TEMP_UNLOCKED, tempUnlocked);
+                        editor.putString(KEY_UNLOCKED_EXPIRATIONS, expirations.toString());
+                        editor.apply();
+                    } else {
+                        // Still within grace period! Cancel the timer since they are back in the app
+                        Log.d(TAG, "Reopened within grace period for " + packageName);
+                        expirations.remove(packageName);
+                        prefs.edit().putString(KEY_UNLOCKED_EXPIRATIONS, expirations.toString()).apply();
+                        return; // Allow access
+                    }
+                } else {
+                    // No expiration set (e.g., just unlocked, haven't left it yet)
+                    return; // Allow access
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error checking grace period", e);
+            }
+        }
 
-        Log.d(TAG, "Locked app detected: " + packageName);
+        // If it was removed from tempUnlocked due to expiration, or was never in it:
+        if (!tempUnlocked.contains(packageName)) {
+            Log.d(TAG, "Locked app detected: " + packageName);
 
-        // Launch lock overlay
-        Intent lockIntent = new Intent(this, LockOverlayActivity.class);
-        lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        lockIntent.putExtra("locked_package", packageName);
-        lockIntent.putExtra("locked_app_name", getLockedAppName(packageName));
-        lockIntent.putExtra("required_reps", getRequiredReps(packageName));
-        startActivity(lockIntent);
+            // Launch lock overlay
+            Intent lockIntent = new Intent(this, LockOverlayActivity.class);
+            lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            lockIntent.putExtra("locked_package", packageName);
+            lockIntent.putExtra("locked_app_name", getLockedAppName(packageName));
+            lockIntent.putExtra("required_reps", getRequiredReps(packageName));
+            startActivity(lockIntent);
+        }
     }
 
     private boolean isAppLocked(String packageName) {

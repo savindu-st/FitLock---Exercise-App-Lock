@@ -87,7 +87,23 @@ public class AppLockServicePlugin extends Plugin {
             Set<String> tempUnlocked = new HashSet<>(
                     prefs.getStringSet(KEY_TEMP_UNLOCKED, new HashSet<>()));
             tempUnlocked.add(packageName);
-            prefs.edit().putStringSet(KEY_TEMP_UNLOCKED, tempUnlocked).apply();
+            
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putStringSet(KEY_TEMP_UNLOCKED, tempUnlocked);
+            
+            // Clear any existing expiration for this package
+            try {
+                String expirationsJson = prefs.getString("temp_unlocked_expirations", "{}");
+                JSONObject expirations = new JSONObject(expirationsJson);
+                if (expirations.has(packageName)) {
+                    expirations.remove(packageName);
+                    editor.putString("temp_unlocked_expirations", expirations.toString());
+                }
+            } catch (Exception e) {
+                // Ignore json errors
+            }
+            
+            editor.apply();
             call.resolve();
         } catch (Exception e) {
             call.reject("Failed to add temp unlock: " + e.getMessage());
@@ -98,7 +114,10 @@ public class AppLockServicePlugin extends Plugin {
     public void clearTempUnlocks(PluginCall call) {
         try {
             SharedPreferences prefs = getContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            prefs.edit().putStringSet(KEY_TEMP_UNLOCKED, new HashSet<>()).apply();
+            prefs.edit()
+                 .putStringSet(KEY_TEMP_UNLOCKED, new HashSet<>())
+                 .putString("temp_unlocked_expirations", "{}")
+                 .apply();
             call.resolve();
         } catch (Exception e) {
             call.reject("Failed to clear temp unlocks: " + e.getMessage());
