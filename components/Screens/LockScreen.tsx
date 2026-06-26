@@ -66,6 +66,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
   const countRef = useRef(0);
   const stateRef = useRef<ExerciseState>(ExerciseState.IDLE);
   const exerciseRef = useRef<ExerciseType>(ExerciseType.PUSHUPS);
+  const pushupTrackerRef = useRef({ wristY: 0, shoulderY: 0 });
 
   // Sync ref with state
   useEffect(() => {
@@ -126,10 +127,17 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
         let isFullBodyVisible = false;
 
         if (currentType === ExerciseType.PUSHUPS) {
-          // For pushups, legs might be hidden if facing the camera. Only require head and arms.
+          // For pushups, legs might be hidden. When facing camera, require both arms. Otherwise, at least one arm.
           const leftArmVis = leftShoulder.visibility > 0.5 && leftElbow.visibility > 0.5;
           const rightArmVis = rightShoulder.visibility > 0.5 && rightElbow.visibility > 0.5;
-          isFullBodyVisible = isHeadVisible && (leftArmVis || rightArmVis);
+          const shoulderXDiff = Math.abs(leftShoulder.x - rightShoulder.x);
+          const isFacingCamera = leftShoulder.visibility > 0.5 && rightShoulder.visibility > 0.5 && shoulderXDiff < 0.15;
+          
+          if (isFacingCamera) {
+            isFullBodyVisible = isHeadVisible && leftArmVis && rightArmVis;
+          } else {
+            isFullBodyVisible = isHeadVisible && (leftArmVis || rightArmVis);
+          }
         } else if (currentType === ExerciseType.SQUATS) {
           // For squats, ensure head and at least one leg is visible.
           const leftLegVis = leftHip.visibility > 0.5 && leftKnee.visibility > 0.5;
@@ -168,6 +176,8 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
 
             let isDown = false;
             let isUp = false;
+            let currentWristY = 0;
+            let currentShoulderY = 0;
 
             if (isFacingCamera) {
               // When facing camera, arm angle is unreliable. 
@@ -180,28 +190,44 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
 
               isUp = yDiff > 0.06;   // shoulders clearly above elbows
               isDown = yDiff < 0.02; // shoulders near elbow level
+              
+              currentWristY = (leftWrist.y + rightWrist.y) / 2;
+              currentShoulderY = avgShoulderY;
             } else {
               // Side-on view: use arm angle (relaxed thresholds)
               const armAngle = calculateAngle(shoulder, elbow, wrist);
               isUp = armAngle > 140;   // was 150, now more forgiving
               isDown = armAngle < 110;  // was 90, now much more forgiving
+              
+              currentWristY = wrist.y;
+              currentShoulderY = shoulder.y;
             }
 
             if (isUp) {
               if (stateRef.current === ExerciseState.DOWN) {
-                countRef.current += 1;
-                setReps(countRef.current);
-                stateRef.current = ExerciseState.UP;
-                setFeedback("Good! Down again.");
+                const wristDiff = Math.abs(currentWristY - pushupTrackerRef.current.wristY);
+                const shoulderDiff = pushupTrackerRef.current.shoulderY - currentShoulderY; // positive if shoulder moved UP
+                
+                if (wristDiff < 0.15 && shoulderDiff > 0.04) {
+                  countRef.current += 1;
+                  setReps(countRef.current);
+                  stateRef.current = ExerciseState.UP;
+                  setFeedback("Good! Down again.");
+                  pushupTrackerRef.current = { wristY: currentWristY, shoulderY: currentShoulderY };
+                } else {
+                  setFeedback("Keep palms still and move body!");
+                }
               } else if (stateRef.current !== ExerciseState.COMPLETED) {
                 stateRef.current = ExerciseState.UP;
                 setFeedback("Start going down");
+                pushupTrackerRef.current = { wristY: currentWristY, shoulderY: currentShoulderY };
               }
             } else if (isDown) {
               if (stateRef.current === ExerciseState.UP || stateRef.current === ExerciseState.IDLE) {
                 stateRef.current = ExerciseState.DOWN;
                 setFeedback("Push UP!");
               }
+              pushupTrackerRef.current = { wristY: currentWristY, shoulderY: currentShoulderY };
             }
 
           } else if (currentType === ExerciseType.SQUATS) {
