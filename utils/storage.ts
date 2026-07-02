@@ -87,11 +87,15 @@ export const loadHistory = (): HistoryItem[] => {
 export interface UserProfile {
     name: string;
     email: string;
+    avatar?: string;
+    soundEnabled?: boolean;
 }
 
 const DEFAULT_PROFILE: UserProfile = {
     name: 'User',
     email: '',
+    avatar: '💪',
+    soundEnabled: true,
 };
 
 export const saveProfile = (profile: UserProfile): void => {

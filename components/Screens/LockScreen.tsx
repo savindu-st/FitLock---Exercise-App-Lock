@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AppItem, ExerciseState, ExerciseType } from '../../types';
 import { calculateAngle } from '../../utils/geometry';
+import { loadProfile } from '../../utils/storage';
 import { ArrowLeft, RefreshCw, CheckCircle2, ChevronDown, Info, X, ArrowDown, Zap } from 'lucide-react';
 
 // Declare globals for CDN scripts
@@ -67,6 +68,59 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
   const stateRef = useRef<ExerciseState>(ExerciseState.IDLE);
   const exerciseRef = useRef<ExerciseType>(ExerciseType.PUSHUPS);
   const pushupTrackerRef = useRef({ wristY: 0, shoulderY: 0 });
+  
+  const profileRef = useRef(loadProfile());
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+    } catch (e) {
+      console.warn("Web Audio API not supported", e);
+    }
+    return () => {
+      audioCtxRef.current?.close().catch(() => {});
+    };
+  }, []);
+
+  const playBeep = () => {
+    const soundEnabled = profileRef.current.soundEnabled ?? true;
+    if (!soundEnabled || !audioCtxRef.current) return;
+
+    const play = () => {
+      try {
+        const ctx = audioCtxRef.current;
+        if (!ctx) return;
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+
+        oscillator.type = 'sine';
+        // A nice pleasant bell-like beep (880 Hz)
+        oscillator.frequency.value = 880;
+
+        // Set volume to 0.5 and fade out over 0.3 seconds
+        gainNode.gain.value = 0.5;
+        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + 0.3);
+      } catch (e) {
+        console.warn("Could not play beep", e);
+      }
+    };
+
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume().then(play).catch(e => console.warn("Audio resume failed", e));
+    } else {
+      play();
+    }
+  };
 
   // Sync ref with state
   useEffect(() => {
@@ -210,6 +264,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
                 
                 if (wristDiff < 0.15 && shoulderDiff > 0.04) {
                   countRef.current += 1;
+                  playBeep();
                   setReps(countRef.current);
                   stateRef.current = ExerciseState.UP;
                   setFeedback("Good! Down again.");
@@ -248,6 +303,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
             if (legAngle > 150) { // STANDING
               if (stateRef.current === ExerciseState.DOWN) {
                 countRef.current += 1;
+                playBeep();
                 setReps(countRef.current);
                 stateRef.current = ExerciseState.UP;
                 setFeedback("Great! Squat down.");
@@ -292,6 +348,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
             if (handsDown && feetTogether) { // DOWN (Start/End position)
               if (stateRef.current === ExerciseState.UP) {
                 countRef.current += 1;
+                playBeep();
                 setReps(countRef.current);
                 stateRef.current = ExerciseState.DOWN;
                 setFeedback("Good! Jump up.");
