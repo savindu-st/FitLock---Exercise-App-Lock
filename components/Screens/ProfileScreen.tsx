@@ -193,7 +193,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate, currentTheme 
         {/* Footer Section */}
         <div className="pt-4 pb-8 flex justify-center">
           <p className="text-center text-xs text-gray-400 dark:text-gray-500 font-medium tracking-wide">
-            Version 1.0.9 (Build 2026.05.21)
+            Version 1.0.10 (Build 2026.07.02)
           </p>
         </div>
         
