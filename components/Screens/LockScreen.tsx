@@ -150,17 +150,66 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
       ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
       if (results.poseLandmarks) {
-        // Use light blue (#38bdf8 - sky-400) for both connectors and landmarks
-        const lightBlue = '#38bdf8';
-
-        window.drawConnectors(ctx, results.poseLandmarks, window.POSE_CONNECTIONS,
-          { color: lightBlue, lineWidth: 4 });
-
-        window.drawLandmarks(ctx, results.poseLandmarks,
-          { color: lightBlue, lineWidth: 2, fillColor: lightBlue, radius: 4 });
-
         const landmarks = results.poseLandmarks;
         const currentType = exerciseRef.current;
+        const width = canvas.width;
+        const height = canvas.height;
+        const cyan = '#00ffff';
+
+        // 1. Draw glowing dashed lines
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = cyan;
+        ctx.shadowColor = cyan;
+        ctx.shadowBlur = 8;
+        ctx.setLineDash([10, 8]);
+        
+        window.POSE_CONNECTIONS.forEach(([startIdx, endIdx]: [number, number]) => {
+          // Only draw body connections (ignore face landmarks 0-10)
+          if (startIdx >= 11 && endIdx >= 11) {
+            const start = landmarks[startIdx];
+            const end = landmarks[endIdx];
+            if (start.visibility > 0.5 && end.visibility > 0.5) {
+              ctx.beginPath();
+              ctx.moveTo(start.x * width, start.y * height);
+              ctx.lineTo(end.x * width, end.y * height);
+              ctx.stroke();
+            }
+          }
+        });
+        
+        ctx.setLineDash([]);
+        ctx.shadowBlur = 0;
+        
+        // 2. Draw Hexagon Nodes
+        landmarks.forEach((landmark: any, index: number) => {
+          // Only draw body nodes (ignore face landmarks 0-10)
+          if (index >= 11 && landmark.visibility > 0.5) {
+            const x = landmark.x * width;
+            const y = landmark.y * height;
+            const size = 7;
+            
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+              const angle = (Math.PI / 3) * i - Math.PI / 6;
+              const px = x + size * Math.cos(angle);
+              const py = y + size * Math.sin(angle);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = cyan;
+            ctx.stroke();
+            
+            // Inner dot
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, 2 * Math.PI);
+            ctx.fillStyle = cyan;
+            ctx.fill();
+          }
+        });
 
         // --- FULL BODY VISIBILITY CHECK ---
         const nose = landmarks[0];
@@ -363,6 +412,58 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
               }
             }
           }
+        }
+
+        // 3. Draw Overlay Box
+        let displayAngle = 0;
+        let angleName = "Angle";
+        let targetNode = landmarks[23]; // Default to left hip
+        
+        if (currentType === ExerciseType.SQUATS) {
+          angleName = "Hips";
+          const leftHip = landmarks[23], rightHip = landmarks[24], leftKnee = landmarks[25], rightKnee = landmarks[26], leftAnkle = landmarks[27], rightAnkle = landmarks[28];
+          const useLeft = ((leftHip.visibility + leftKnee.visibility + leftAnkle.visibility) / 3) > ((rightHip.visibility + rightKnee.visibility + rightAnkle.visibility) / 3);
+          const hip = useLeft ? leftHip : rightHip;
+          displayAngle = calculateAngle(hip, useLeft ? leftKnee : rightKnee, useLeft ? leftAnkle : rightAnkle);
+          targetNode = hip;
+        } else if (currentType === ExerciseType.PUSHUPS) {
+          angleName = "Elbow";
+          const leftShoulder = landmarks[11], rightShoulder = landmarks[12], leftElbow = landmarks[13], rightElbow = landmarks[14], leftWrist = landmarks[15], rightWrist = landmarks[16];
+          const useLeft = ((leftShoulder.visibility + leftElbow.visibility + leftWrist.visibility) / 3) > ((rightShoulder.visibility + rightElbow.visibility + rightWrist.visibility) / 3);
+          const elbow = useLeft ? leftElbow : rightElbow;
+          displayAngle = calculateAngle(useLeft ? leftShoulder : rightShoulder, elbow, useLeft ? leftWrist : rightWrist);
+          targetNode = elbow;
+        } else if (currentType === ExerciseType.JUMPING_JACKS) {
+          angleName = "Shoulder";
+          const leftShoulder = landmarks[11], rightShoulder = landmarks[12], leftElbow = landmarks[13], rightElbow = landmarks[14], leftHip = landmarks[23], rightHip = landmarks[24];
+          const useLeft = leftShoulder.visibility > rightShoulder.visibility;
+          const shoulder = useLeft ? leftShoulder : rightShoulder;
+          displayAngle = calculateAngle(useLeft ? leftHip : rightHip, shoulder, useLeft ? leftElbow : rightElbow);
+          targetNode = shoulder;
+        }
+
+        if (targetNode && targetNode.visibility > 0.5) {
+          const nodeX = targetNode.x * width;
+          const nodeY = targetNode.y * height;
+          
+          ctx.save();
+          // Move context to the node's position and flip horizontally
+          // This prevents text from being mirrored by the canvas CSS flip
+          ctx.translate(nodeX, nodeY);
+          ctx.scale(-1, 1);
+          
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.beginPath();
+          // Draw rect extending leftwards in the flipped context (rightwards on screen)
+          ctx.roundRect(20, -18, 85, 26, 8);
+          ctx.fill();
+          
+          ctx.font = '14px sans-serif';
+          ctx.fillStyle = '#00ffff';
+          // Draw text left-aligned in the flipped context
+          ctx.fillText(`${angleName}: ${Math.round(displayAngle)}°`, 28, 0);
+          
+          ctx.restore();
         }
       }
       ctx.restore();
