@@ -185,7 +185,7 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
           const leftArmVis = leftShoulder.visibility > 0.5 && leftElbow.visibility > 0.5;
           const rightArmVis = rightShoulder.visibility > 0.5 && rightElbow.visibility > 0.5;
           const shoulderXDiff = Math.abs(leftShoulder.x - rightShoulder.x);
-          const isFacingCamera = leftShoulder.visibility > 0.5 && rightShoulder.visibility > 0.5 && shoulderXDiff < 0.15;
+          const isFacingCamera = leftShoulder.visibility > 0.5 && rightShoulder.visibility > 0.5 && shoulderXDiff > 0.15;
           
           if (isFacingCamera) {
             isFullBodyVisible = isHeadVisible && leftArmVis && rightArmVis;
@@ -224,9 +224,9 @@ const LockScreen: React.FC<LockScreenProps> = ({ app, onUnlock, onCancel }) => {
             const wrist = useLeft ? leftWrist : rightWrist;
             const hip = useLeft ? leftHip : rightHip;
 
-            // Detect if user is facing the camera (both shoulders visible & close in X)
+            // Detect if user is facing the camera (both shoulders visible & far apart in X)
             const shoulderXDiff = Math.abs(leftShoulder.x - rightShoulder.x);
-            const isFacingCamera = leftShoulder.visibility > 0.5 && rightShoulder.visibility > 0.5 && shoulderXDiff < 0.15;
+            const isFacingCamera = leftShoulder.visibility > 0.5 && rightShoulder.visibility > 0.5 && shoulderXDiff > 0.15;
 
             let isDown = false;
             let isUp = false;
