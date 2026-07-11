@@ -45,7 +45,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 import { useSubscription } from './components/Context/SubscriptionContext';
-import { AdMob, BannerAdSize, BannerAdPosition, BannerAdPluginEvents } from '@capacitor-community/admob';
+import { AdMob, BannerAdSize, BannerAdPosition, BannerAdPluginEvents, MaxAdContentRating } from '@capacitor-community/admob';
 
 const App: React.FC = () => {
   const { isPremium } = useSubscription();
@@ -145,7 +145,10 @@ const App: React.FC = () => {
           // Check/Request tracking authorization
           await AdMob.trackingAuthorizationStatus();
           
-          await AdMob.initialize();
+          await AdMob.initialize({
+            tagForChildDirectedTreatment: true,
+            maxAdContentRating: MaxAdContentRating.General,
+          });
           console.log('[FitLock] AdMob Initialized');
           setAdInitialized(true);
         } catch (err) {
@@ -173,10 +176,10 @@ const App: React.FC = () => {
       });
 
       return () => {
-        loadedSub.remove();
-        failedSub.remove();
-        openedSub.remove();
-        closedSub.remove();
+        loadedSub.then(sub => sub.remove());
+        failedSub.then(sub => sub.remove());
+        openedSub.then(sub => sub.remove());
+        closedSub.then(sub => sub.remove());
       };
     }
   }, []);
