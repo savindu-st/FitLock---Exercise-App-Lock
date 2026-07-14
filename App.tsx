@@ -45,7 +45,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 import { useSubscription } from './components/Context/SubscriptionContext';
-import { AdMob, BannerAdSize, BannerAdPosition, BannerAdPluginEvents, MaxAdContentRating } from '@capacitor-community/admob';
+import { AdMob, BannerAdSize, BannerAdPosition, BannerAdPluginEvents, MaxAdContentRating, AdmobConsentStatus, AdmobConsentDebugGeography } from '@capacitor-community/admob';
 
 const App: React.FC = () => {
   const { isPremium } = useSubscription();
@@ -149,7 +149,19 @@ const App: React.FC = () => {
             tagForChildDirectedTreatment: true,
             maxAdContentRating: MaxAdContentRating.General,
           });
-          console.log('[FitLock] AdMob Initialized');
+          
+          // Request consent information (UMP SDK)
+          const consentInfo = await AdMob.requestConsentInfo({
+            debugGeography: AdmobConsentDebugGeography.EEA, // Simulates EEA for testing
+            // testDeviceIdentifiers: ['YOUR_DEVICE_ID'], // Uncomment and add your test device ID if needed for local testing
+          });
+
+          // Show consent form if required
+          if (consentInfo.isConsentFormAvailable && consentInfo.status === AdmobConsentStatus.REQUIRED) {
+            await AdMob.showConsentForm();
+          }
+
+          console.log('[FitLock] AdMob Initialized with Consent Status:', consentInfo.status);
           setAdInitialized(true);
         } catch (err) {
           console.warn('AdMob Init Error:', err);

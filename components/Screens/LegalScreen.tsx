@@ -1,12 +1,40 @@
 import React from 'react';
 import { ArrowLeft, Shield, AlertTriangle, Scale, Lock, Camera, Info } from 'lucide-react';
 import { Browser } from '@capacitor/browser';
+import { AdMob } from '@capacitor-community/admob';
+import { Capacitor } from '@capacitor/core';
 
 interface LegalScreenProps {
     onBack: () => void;
 }
 
 const LegalScreen: React.FC<LegalScreenProps> = ({ onBack }) => {
+    const [showPrivacyOptions, setShowPrivacyOptions] = React.useState(false);
+
+    React.useEffect(() => {
+        const checkPrivacyStatus = async () => {
+            if (Capacitor.isNativePlatform()) {
+                try {
+                    const info = await AdMob.requestConsentInfo();
+                    if (info.privacyOptionsRequirementStatus === 'REQUIRED') {
+                        setShowPrivacyOptions(true);
+                    }
+                } catch (err) {
+                    console.warn('[FitLock] Failed to check privacy options status:', err);
+                }
+            }
+        };
+        checkPrivacyStatus();
+    }, []);
+
+    const handleManageConsent = async () => {
+        try {
+            await AdMob.showPrivacyOptionsForm();
+        } catch (err) {
+            console.warn('[FitLock] Failed to show privacy options form:', err);
+        }
+    };
+
     return (
         <div className="pb-24 max-w-3xl mx-auto w-full bg-gray-50 dark:bg-gray-950 min-h-screen">
             {/* Header */}
@@ -67,6 +95,26 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack }) => {
                         />
                     </div>
                 </section>
+
+                {showPrivacyOptions && (
+                    <>
+                        <div className="h-px w-full bg-gray-200 dark:bg-gray-800 my-6" />
+                        <section>
+                            <div className="flex items-center gap-2 mb-3 px-2">
+                                <Shield size={20} className="text-gray-700 dark:text-gray-300" />
+                                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Ad Consent</h2>
+                            </div>
+                            <div className="space-y-3">
+                                <button 
+                                    onClick={handleManageConsent}
+                                    className="w-full bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-5 text-center text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    Manage Ad Consent
+                                </button>
+                            </div>
+                        </section>
+                    </>
+                )}
 
                 <div className="h-px w-full bg-gray-200 dark:bg-gray-800 my-6" />
 
