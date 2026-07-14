@@ -151,10 +151,7 @@ const App: React.FC = () => {
           });
           
           // Request consent information (UMP SDK)
-          const consentInfo = await AdMob.requestConsentInfo({
-            debugGeography: AdmobConsentDebugGeography.EEA, // Simulates EEA for testing
-            // testDeviceIdentifiers: ['YOUR_DEVICE_ID'], // Uncomment and add your test device ID if needed for local testing
-          });
+          const consentInfo = await AdMob.requestConsentInfo();
 
           // Show consent form if required
           if (consentInfo.isConsentFormAvailable && consentInfo.status === AdmobConsentStatus.REQUIRED) {
@@ -222,15 +219,21 @@ const App: React.FC = () => {
         return;
       }
 
+      // Determine if we are in development mode
+      const isDev = import.meta.env.DEV;
+      const TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111';
+      const PROD_BANNER_ID = 'ca-app-pub-8224368007922953/5157443584';
+      const activeAdId = isDev ? TEST_BANNER_ID : PROD_BANNER_ID;
+
       // If we already have a banner, just ensure it's shown
       if (bannerExistsRef.current) {
         try {
           await AdMob.showBanner({
-            adId: import.meta.env.VITE_ADMOB_BANNER_ID || 'ca-app-pub-3940256099942544/6300978111', 
+            adId: activeAdId, 
             adSize: BannerAdSize.ADAPTIVE_BANNER,
             position: BannerAdPosition.BOTTOM_CENTER,
             margin: 110, 
-            isTesting: !import.meta.env.VITE_ADMOB_BANNER_ID
+            isTesting: isDev
           });
           console.log('[FitLock] AdMob: Banner Resumed');
           return;
@@ -246,11 +249,11 @@ const App: React.FC = () => {
         
         console.log('[FitLock] Attempting to create adaptive banner...');
         await AdMob.showBanner({
-          adId: import.meta.env.VITE_ADMOB_BANNER_ID || 'ca-app-pub-3940256099942544/6300978111', 
+          adId: activeAdId, 
           adSize: BannerAdSize.ADAPTIVE_BANNER,
           position: BannerAdPosition.BOTTOM_CENTER,
           margin: 110, 
-          isTesting: !import.meta.env.VITE_ADMOB_BANNER_ID
+          isTesting: isDev
         });
         
         bannerExistsRef.current = true;
