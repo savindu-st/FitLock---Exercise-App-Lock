@@ -45,7 +45,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 import { useSubscription } from './components/Context/SubscriptionContext';
-import { AdMob, BannerAdSize, BannerAdPosition, BannerAdPluginEvents, MaxAdContentRating, AdmobConsentStatus, AdmobConsentDebugGeography } from '@capacitor-community/admob';
+import { AdMob, BannerAdSize, BannerAdPosition, BannerAdPluginEvents, AdmobConsentStatus } from '@capacitor-community/admob';
 
 const App: React.FC = () => {
   const { isPremium } = useSubscription();
@@ -146,22 +146,30 @@ const App: React.FC = () => {
           await AdMob.trackingAuthorizationStatus();
           
           await AdMob.initialize({
-            tagForChildDirectedTreatment: true,
-            maxAdContentRating: MaxAdContentRating.General,
+            tagForChildDirectedTreatment: false,
           });
           
-          // Request consent information (UMP SDK)
-          const consentInfo = await AdMob.requestConsentInfo();
+          console.log('[FitLock] AdMob SDK Initialized');
 
-          // Show consent form if required
-          if (consentInfo.isConsentFormAvailable && consentInfo.status === AdmobConsentStatus.REQUIRED) {
-            await AdMob.showConsentForm();
+          // Request consent information (UMP SDK)
+          try {
+            const consentInfo = await AdMob.requestConsentInfo();
+
+            // Show consent form if required
+            if (consentInfo.isConsentFormAvailable && consentInfo.status === AdmobConsentStatus.REQUIRED) {
+              await AdMob.showConsentForm();
+            }
+
+            console.log('[FitLock] AdMob Consent Status:', consentInfo.status);
+          } catch (consentErr) {
+            console.warn('[FitLock] AdMob Consent Error (non-fatal, ads will still load):', consentErr);
           }
 
-          console.log('[FitLock] AdMob Initialized with Consent Status:', consentInfo.status);
           setAdInitialized(true);
         } catch (err) {
-          console.warn('AdMob Init Error:', err);
+          console.error('[FitLock] AdMob Init Error:', err);
+          // Still attempt to show ads even if init partially failed
+          setAdInitialized(true);
         }
       };
       
@@ -225,19 +233,16 @@ const App: React.FC = () => {
       const PROD_BANNER_ID = 'ca-app-pub-8224368007922953/5157443584';
       const activeAdId = isDev ? TEST_BANNER_ID : PROD_BANNER_ID;
 
-      // If we already have a banner, just ensure it's shown
+      // If we already have a banner, just resume it (don't call showBanner again)
       if (bannerExistsRef.current) {
         try {
-          await AdMob.showBanner({
-            adId: activeAdId, 
-            adSize: BannerAdSize.ADAPTIVE_BANNER,
-            position: BannerAdPosition.BOTTOM_CENTER,
-            margin: 110, 
-            isTesting: isDev
-          });
+          await AdMob.resumeBanner();
           console.log('[FitLock] AdMob: Banner Resumed');
           return;
         } catch (e) {
+          console.warn('[FitLock] AdMob: Resume failed, will recreate banner', e);
+          // Banner is in a bad state, remove it and recreate
+          try { await AdMob.removeBanner(); } catch (_) { }
           bannerExistsRef.current = false;
         }
       }
@@ -247,7 +252,7 @@ const App: React.FC = () => {
       try {
         adRequestPendingRef.current = true;
         
-        console.log('[FitLock] Attempting to create adaptive banner...');
+        console.log('[FitLock] Attempting to create adaptive banner with adId:', activeAdId, 'isTesting:', isDev);
         await AdMob.showBanner({
           adId: activeAdId, 
           adSize: BannerAdSize.ADAPTIVE_BANNER,
@@ -257,6 +262,7 @@ const App: React.FC = () => {
         });
         
         bannerExistsRef.current = true;
+        console.log('[FitLock] AdMob: Banner Created Successfully');
       } catch (err) {
         console.warn('[FitLock] AdMob Show Error:', err);
       } finally {
