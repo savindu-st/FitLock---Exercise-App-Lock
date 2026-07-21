@@ -8,7 +8,8 @@ FitLock is an innovative productivity and fitness application that locks your di
 - **Exercise to Unlock**: Perform physical exercises (like squats or push-ups) to regain access to your locked apps.
 - **On-Device AI**: Uses MediaPipe for real-time, privacy-preserving pose detection without sending video data to the cloud.
 - **Workout History**: Keep track of the exercises you've completed.
-- **Monetization**: Includes RevenueCat for premium subscriptions and AdMob for free user ads.
+- **Monetization & Consent**: Includes RevenueCat for premium subscriptions and AdMob for free user ads. Integrated with Google's UMP SDK for GDPR/privacy consent management.
+- **Legal & Privacy**: Built-in legal screens for privacy policy and consent management.
 - **Dark Mode Support**: Full support for system-level light and dark themes.
 
 ## Tech Stack
@@ -16,7 +17,7 @@ FitLock is an innovative productivity and fitness application that locks your di
 - **Frontend**: React, Vite, Tailwind CSS, Lucide React
 - **Mobile Runtime**: Capacitor (Android)
 - **AI/ML**: MediaPipe Pose
-- **Monetization**: RevenueCat (In-App Purchases), AdMob
+- **Monetization & Privacy**: RevenueCat (In-App Purchases), AdMob, UMP SDK
 
 ## Prerequisites
 
@@ -31,7 +32,13 @@ FitLock is an innovative productivity and fitness application that locks your di
    ```
 
 2. **Set up Environment Variables:**
-   Create a `.env` or `.env.local` file with required keys (RevenueCat API keys, AdMob IDs).
+   Create a `.env` or `.env.local` file in the root directory with the required keys for RevenueCat and AdMob:
+   ```env
+   VITE_REVENUECAT_IOS_KEY=your_revenuecat_ios_key
+   VITE_REVENUECAT_ANDROID_KEY=your_revenuecat_android_key
+   VITE_ADMOB_BANNER_ID=your_admob_banner_id
+   VITE_ADMOB_APP_ID=your_admob_app_id
+   ```
 
 3. **Run the development server:**
    ```bash
