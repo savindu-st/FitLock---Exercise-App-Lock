@@ -202,14 +202,14 @@ const App: React.FC = () => {
   }, []);
 
   // AdMob Banner setup
-  const isFullScreen = currentScreen === ScreenName.LOCK_CHALLENGE || 
-                       currentScreen === ScreenName.CAMERA_PERMISSION || 
+  const isFullScreen = currentScreen === ScreenName.CAMERA_PERMISSION || 
                        currentScreen === ScreenName.ONBOARDING ||
                        currentScreen === ScreenName.APP_CONTENT;
 
   // Track banner state to prevent duplicate requests and improve resilience
   const adRequestPendingRef = useRef(false);
   const bannerExistsRef = useRef(false);
+  const currentAdMarginRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform() || !adInitialized) return;
@@ -232,18 +232,27 @@ const App: React.FC = () => {
       const TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111';
       const PROD_BANNER_ID = 'ca-app-pub-8224368007922953/5157443584';
       const activeAdId = isDev ? TEST_BANNER_ID : PROD_BANNER_ID;
+      
+      const desiredMargin = currentScreen === ScreenName.LOCK_CHALLENGE ? 0 : 110;
 
-      // If we already have a banner, just resume it (don't call showBanner again)
+      // If we already have a banner
       if (bannerExistsRef.current) {
-        try {
-          await AdMob.resumeBanner();
-          console.log('[FitLock] AdMob: Banner Resumed');
-          return;
-        } catch (e) {
-          console.warn('[FitLock] AdMob: Resume failed, will recreate banner', e);
-          // Banner is in a bad state, remove it and recreate
+        if (currentAdMarginRef.current !== desiredMargin) {
+          // Margin changed, we must recreate the banner
+          console.log('[FitLock] AdMob: Margin changed, recreating banner');
           try { await AdMob.removeBanner(); } catch (_) { }
           bannerExistsRef.current = false;
+        } else {
+          // Margin is the same, just resume it
+          try {
+            await AdMob.resumeBanner();
+            console.log('[FitLock] AdMob: Banner Resumed');
+            return;
+          } catch (e) {
+            console.warn('[FitLock] AdMob: Resume failed, will recreate banner', e);
+            try { await AdMob.removeBanner(); } catch (_) { }
+            bannerExistsRef.current = false;
+          }
         }
       }
 
@@ -252,16 +261,17 @@ const App: React.FC = () => {
       try {
         adRequestPendingRef.current = true;
         
-        console.log('[FitLock] Attempting to create adaptive banner with adId:', activeAdId, 'isTesting:', isDev);
+        console.log('[FitLock] Attempting to create adaptive banner with adId:', activeAdId, 'margin:', desiredMargin, 'isTesting:', isDev);
         await AdMob.showBanner({
           adId: activeAdId, 
           adSize: BannerAdSize.ADAPTIVE_BANNER,
           position: BannerAdPosition.BOTTOM_CENTER,
-          margin: 110, 
+          margin: desiredMargin, 
           isTesting: isDev
         });
         
         bannerExistsRef.current = true;
+        currentAdMarginRef.current = desiredMargin;
         console.log('[FitLock] AdMob: Banner Created Successfully');
       } catch (err) {
         console.warn('[FitLock] AdMob Show Error:', err);
